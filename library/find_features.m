@@ -8,6 +8,9 @@ function [points, descriptors] = find_features(image, method, regions, method_pa
 
 %% Validate arguments
 % Check method
+if nargin < 2
+    method = 'surf';
+end
 method = lower(method);
 if ~strcmp(method, 'sift') && ~strcmp(method, 'surf')
     error('Method for feature detection must be SIFT or SURF.')
