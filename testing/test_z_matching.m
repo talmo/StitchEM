@@ -4,8 +4,8 @@
 
 %% Load things
 % Load sections
-secA = init_section('/data/home/talmo/EMdata/W002/S2-W002_Sec100_Montage');
-secB = init_section('/data/home/talmo/EMdata/W002/S2-W002_Sec101_Montage');
+secA = initialize_section('/data/home/talmo/EMdata/W002/S2-W002_Sec100_Montage');
+secB = initialize_section('/data/home/talmo/EMdata/W002/S2-W002_Sec101_Montage');
 
 % Load images
 tileA = imread(secA.tiles(1).path);
