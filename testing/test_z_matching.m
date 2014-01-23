@@ -5,7 +5,7 @@
 %% Load things
 % Load sections
 secA = initialize_section('/data/home/talmo/EMdata/W002/S2-W002_Sec100_Montage');
-secB = initialize_section('/data/home/talmo/EMdata/W002/S2-W002_Sec102_Montage');
+secB = initialize_section('/data/home/talmo/EMdata/W002/S2-W002_Sec101_Montage');
 
 % Load images
 tic;

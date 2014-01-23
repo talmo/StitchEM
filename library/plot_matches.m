@@ -15,9 +15,9 @@ end
 block_size = tile_size * (1 - overlap);
 
 % Infer which tiles of the section grid to show based on points
-top_left = floor(min(min(pointsA), min(pointsB)) / block_size);
+top_left = floor((min(min(pointsA), min(pointsB)) + repmat(overlap * tile_size, [1 2])) / block_size);
 left = top_left(1); top = top_left(2);
-bottom_right = ceil(max(max(pointsA), max(pointsB)) / block_size);
+bottom_right = ceil((max(max(pointsA), max(pointsB)) - repmat(overlap * tile_size, [1 2])) / block_size);
 right = bottom_right(1); bottom = bottom_right(2);
 
 % Show figure
@@ -31,14 +31,18 @@ set(gca, 'XAxisLocation', 'top');
 xlim([left * block_size, right * block_size])
 ylim([top * block_size, bottom * block_size])
 
-% Display grid with ticks at every block
+% Display grid with ticks at every block and seam
 grid on
-set(gca, 'XTick', (left : right) * block_size);
-set(gca, 'YTick', (top : bottom) * block_size);
+set(gca, 'XTick', sort([(left : right) * block_size, (left + 1 : right - 1) * block_size + tile_size * overlap]));
+set(gca, 'YTick', sort([(top : bottom) * block_size, (top + 1 : bottom - 1) * block_size + tile_size * overlap]));
 
 % Display tile labels as integers
-set(gca, 'XTickLabel', num2str(get(gca,'XTick')','%d'))
-set(gca, 'YTickLabel', num2str(get(gca,'YTick')','%d'))
+x_ticks = num2str(get(gca, 'XTick')', '%d');
+x_ticks(2:2:end, :) = repmat(' ', size(x_ticks(2:2:end, :)));
+y_ticks = num2str(get(gca, 'YTick')', '%d');
+y_ticks(2:2:end, :) = repmat(' ', size(y_ticks(2:2:end, :)));
+set(gca, 'XTickLabel', x_ticks)
+set(gca, 'YTickLabel', y_ticks)
 
 %% Plot the point matches
 % Plot the individual points
