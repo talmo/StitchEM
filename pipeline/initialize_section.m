@@ -25,8 +25,9 @@ if exist([section_path filesep 'stitch_data.mat'], 'file')
     cache = load([section_path filesep 'stitch_data.mat'], 'section');
     % If we're not overwriting the data file, just load it and quit
     if ~overwrite
-        fprintf('Loaded cached section data file from %s.\n', cache.section.time_stamp)
         section = cache.section;
+        fprintf('Loaded %s metadata from cache saved on %s.\n', ...
+            section.name, section.time_stamp)
         return
     end
 end
@@ -110,6 +111,6 @@ end
 
 %% Save the metadata to the section folder
 save([section_path filesep 'stitch_data.mat'], 'section')
-fprintf('Saved section data file.\n')
+fprintf('Generated and saved metadata for %s.\n', section.name)
 end
 
