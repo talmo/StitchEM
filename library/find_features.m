@@ -1,10 +1,11 @@
-function [points, descriptors] = find_features(image, method, regions, method_params)
+function [points, descriptors] = find_features(image, method, regions, parameters)
 %FIND_FEATURES Finds distinct features in an image.
 % image should be a grayscale intensity image
 % method should be 'sift' or 'surf'
-% method_params is a structure with the parameters for the method chosen.
+% parameters is a structure with the parameters for the method chosen.
 % regions is a cell array of [top left height width] arrays defining
 %   which regions within the image to search for features.
+% test.
 
 %% Validate arguments
 % Check method
@@ -21,33 +22,45 @@ if nargin < 3
 end
 if nargin >= 3
     if ~iscell(regions)
+        if size(regions) == [1 2]
+            regions = [1 1 regions(1) regions(2)]; % user passed size(img)
+        end
         regions = num2cell(regions, 2); % convert to cell array of rows
     end
 end
 % Check feature detector parameters
 if strcmp(method, 'sift')
-    detector_params = struct();
+    params = struct();
 elseif strcmp(method, 'surf')
-    % arguments for detectSURFFeatures
-    detector_params.detect.MetricThreshold = 5000;
-    detector_params.detect.NumOctave = 3;
-    detector_params.detect.NumScaleLevels = 4;
-    % arguments for extractFeatures
-    detector_params.extract.SURFSize = 64;
+    % Default arguments for detectSURFFeatures
+    params.detect.MetricThreshold = 5000;
+    params.detect.NumOctave = 3;
+    params.detect.NumScaleLevels = 4;
+    
+    % Default arguments for extractFeatures
+    params.extract.SURFSize = 64;
 end
+% Overwrite defaults with any parameters passed in
 if nargin >= 4
-    f = fieldnames(method_params);
+    f = fieldnames(parameters); % fields
     for i = 1:length(f)
-      detector_params = setfield(detector_params, f{i}, getfield(method_params, f{i}));
+        sf = fieldnames(parameters.(f{i})); % subfields
+        for e = 1:length(sf)
+            params.(f{i}).(sf{e}) = parameters.(f{i}).(sf{e});
+        end
     end
 end
 
 %% Find features in each region
-points = {};
-descriptors = {};
-for region = regions
-    region = region{1};
-    % Get region from the image
+% Pre-allocate containers
+points = zeros(10000, 2, 'single');
+descriptors = zeros(10000, 64, 'single');
+num_points = 0;
+
+% Find features in each region
+for i = 1:numel(regions)
+    region = regions{i};
+    % Get region from the image where region = [top left width height]
     img_region = image(region(1) : region(1) + region(3) - 1, ...
                        region(2) : region(2) + region(4) - 1);
     
@@ -59,24 +72,35 @@ for region = regions
     % SURF
     if strcmp(method, 'surf')
         % Find interest points
-        args = struct2args(detector_params.detect);
+        args = struct2args(params.detect);
         interest_points = detectSURFFeatures(img_region, args{:});
         
         % Get descriptors from pixels around interest points
-        args = struct2args(detector_params.extract);
+        args = struct2args(params.extract);
         [region_descriptors, valid_points] = extractFeatures(img_region, ...
             interest_points, args{:});
         
+        % Count number of "valid" points with descriptors
+        num_points_in_region = length(valid_points);
+        
         % Adjust coordinate of region points to image coordinates
         valid_points(:).Location = valid_points(:).Location + ...
-                [repmat(region(1) - 1, length(valid_points), 1) ...
-                 repmat(region(3) - 1, length(valid_points), 1)];
+                [repmat(region(1) - 1, num_points_in_region, 1) ...
+                 repmat(region(2) - 1, num_points_in_region, 1)];
         
-        % Append to list of points and descriptors
-        points = [points; num2cell(valid_points(:).Location, 2)];
-        descriptors = [descriptors; num2cell(region_descriptors, 2)];
+        % Save to containers of points and descriptors
+        points(num_points + 1 : num_points + num_points_in_region, :) = ...
+            valid_points(:).Location;
+        descriptors(num_points + 1 : num_points + num_points_in_region, :) = ...
+            region_descriptors;
+        num_points = num_points + num_points_in_region;
     end
 end
+
+% Trim container arrays down to fit actual number of features found
+points = points(1 : num_points, :);
+descriptors = descriptors(1 : num_points, :);
+
 end
 
 %% Helper functions
