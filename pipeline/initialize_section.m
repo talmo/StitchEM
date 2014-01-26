@@ -21,8 +21,8 @@ if nargin < 3
 end
 
 %% Check for cached file
-if exist([section_path filesep 'stitch_data.mat'], 'file')
-    cache = load([section_path filesep 'stitch_data.mat'], 'section');
+if exist([section_path filesep 'stitch_metadata.mat'], 'file')
+    cache = load([section_path filesep 'stitch_metadata.mat'], 'section');
     % If we're not overwriting the data file, just load it and quit
     if ~overwrite
         section = cache.section;
@@ -36,17 +36,17 @@ end
 % Look for files that follow the tile naming convention
 tile_filename_pattern = 'Tile_r(?<row>[0-9]*)-c(?<col>[0-9]*)_.*.tif';
 section_files = dir(section_path);
-nTiles = sum(~cellfun(@isempty, regexp({section_files.name}, tile_filename_pattern)));
+num_tiles = sum(~cellfun(@isempty, regexp({section_files.name}, tile_filename_pattern)));
 
 % Check to see that we've at least found some tiles
-if nTiles <= 0
+if num_tiles <= 0
     error('Couldn\''t find any tile images in the section folder.\n%s\n', section_path)
 end
 tiles = section_files(~cellfun(@isempty, regexp({section_files.name}, tile_filename_pattern)));
 
 %% General metadata about the section
 section.path = section_path;
-section.num_tiles = nTiles;
+section.num_tiles = num_tiles;
 section.time_stamp = datestr(now);
 [~, section.name] = fileparts(section_path);
 section.overlap_ratio = overlap_ratio;
@@ -57,60 +57,112 @@ section.wafer = path_tokens.wafer;
 section.section_number = path_tokens.sec;
 
 %% Metadata for each tile
-% Initialize tiles sub-struct
-section.tiles = struct(...
-    'name', cell(1, nTiles), ...     % tile name
-    'tile_num', cell(1, nTiles), ... % tile number
-    'path', cell(1, nTiles), ...     % full path to the image file
-    'filesize', cell(1, nTiles), ... % the size of the image in bytes
-    'width', cell(1, nTiles), ...    % dimensions of the image in pixels
-    'height', cell(1, nTiles), ...   % dimensions of the image in pixels
-    'section', cell(1, nTiles), ...  % section the tile belongs to
-    'row', cell(1, nTiles), ...      % coordinates relative to the grid
-    'col', cell(1, nTiles), ...      %  tiles in the section
-    'x_offset', cell(1, nTiles), ...        % pixel offsets based on the overlap
-    'y_offset', cell(1, nTiles), ...        %  and position within the grid
-    'spatial_ref', cell(1, nTiles), ...     % spatial reference structure (see imref2d)
-    'edge_features', cell(1, nTiles), ...   % feature vector for the edges of the image
-    'center_features', cell(1, nTiles), ... % feature vector for the center of the image
-    'pts', cell(1, nTiles), ...       % global point matches for each seam
-    'T', cell(1, nTiles), ...         % 3x3 linear transformation matrix
-    'affine_tform', cell(1, nTiles)); % transformation saved as MATLAB affine2d structures
+% Initialize field
+section.tiles = struct();
 
-% Get or initialize metadata for each tile
-for i = 1:nTiles
-    tile = section.tiles(i); % Get empty tile structure
+% Get basic metadata for each tile
+for i = 1:num_tiles
+    %tile = struct(); % Initialize empty tile structure
     tile_file = tiles(i); % Current tile file
     img_info = imfinfo([section_path filesep tile_file.name]); % Image info for tile
     filename_tokens = regexp(tile_file.name, tile_filename_pattern, 'names'); % Parse filename for row/col
     
     % Metadata
-    [~, tile.name] = fileparts(tile_file.name);
-    tile.tile_num = i;
-    tile.path = [section_path filesep tile_file.name];
-    tile.filesize = tile_file.bytes;
-    tile.width = img_info(1).Width;
-    tile.height = img_info(1).Height;
-    tile.section = section.section_number; % for convenience
-    tile.row = str2double(filename_tokens.row);
-    tile.col = str2double(filename_tokens.col);
-    tile.x_offset = (tile.col - 1) * tile.width * (1 - section.overlap_ratio);
-    tile.y_offset = (tile.row - 1) * tile.height * (1 - section.overlap_ratio);
-    tile.spatial_ref = imref2d([tile.height, tile.width], ...
-        [tile.x_offset + 0.5, tile.x_offset + tile.width + 0.5], ... % global coordinates
-        [tile.y_offset + 0.5, tile.y_offset + tile.height + 0.5]);
-    tile.edge_features = [];
-    tile.center_features = [];
-    tile.pts = {};
-    tile.T = eye(3); % initialize to identity matrix
-    tile.affine_tform = affine2d(eye(3));
+    [~, section.tiles(i).name] = fileparts(tile_file.name);
+    section.tiles(i).tile_num = i;
+    section.tiles(i).path = [section_path filesep tile_file.name];
+    section.tiles(i).filesize = tile_file.bytes;
+    section.tiles(i).width = img_info(1).Width;
+    section.tiles(i).height = img_info(1).Height;
+    section.tiles(i).section = section.section_number; % for convenience
+    section.tiles(i).row = str2double(filename_tokens.row);
+    section.tiles(i).col = str2double(filename_tokens.col);
+    section.tiles(i).x_offset = (section.tiles(i).col - 1) * section.tiles(i).width * (1 - section.overlap_ratio);
+    section.tiles(i).y_offset = (section.tiles(i).row - 1) * section.tiles(i).height * (1 - section.overlap_ratio);
+end
+
+% Figure out seams for each tile
+for i = 1:num_tiles
+    % Initialize field
+    section.tiles(i).seams = struct();
+    
+    % Get the tile structure with the metadata we just gathered
+    tile = section.tiles(i);
+    
+    % Figure out which seams it has
+    for e = 1:num_tiles
+        row = section.tiles(e).row;
+        col = section.tiles(e).col;
+        
+        % Check if the tile is 1 grid coordinate position away
+        if abs(tile.row - row) + abs(tile.col - col) == 1
+            region = struct();
+            
+            % Left
+            if tile.col > col
+                % Calculate region
+                region.top = 1;
+                region.left = 1;
+                region.height = tile.height;
+                region.width = round(tile.width * section.overlap_ratio);
+                
+                % Save seam to structure
+                tile.seams.left.region = region;
+                tile.seams.left.matching_tile = e;
+                tile.seams.left.matching_seam = 'right';
+            end
+            
+            % Right
+            if tile.col < col
+                % Calculate region
+                region.top = 1;
+                region.left = round((1 - section.overlap_ratio) * tile.width) + 1;
+                region.height = tile.height;
+                region.width = round(tile.width * section.overlap_ratio);
+                
+                % Save seam to structure
+                tile.seams.right.region = region;
+                tile.seams.right.matching_tile = e;
+                tile.seams.right.matching_seam = 'left';
+            end
+            
+            % Top
+            if tile.row > row
+                % Calculate region
+                region.top = 1;
+                region.left = 1;
+                region.height = round(tile.height * section.overlap_ratio);
+                region.width = tile.width;
+                
+                % Save seam to structure
+                tile.seams.top.region = region;
+                tile.seams.top.matching_tile = e;
+                tile.seams.top.matching_seam = 'bottom';
+            end
+            
+            % Bottom
+            if tile.row < row
+                % Calculate region
+                region.top = round((1 - section.overlap_ratio) * tile.width) + 1;
+                region.left = 1;
+                region.height = round(tile.height * section.overlap_ratio);
+                region.width = tile.width;
+                
+                % Save seam to structure
+                tile.seams.bottom.region = region;
+                tile.seams.bottom.matching_tile = e;
+                tile.seams.bottom.matching_seam = 'top';
+            end
+        end
+    end
     
     % Save to section structure
     section.tiles(i) = tile;
 end
 
+
 %% Save the metadata to the section folder
-save([section_path filesep 'stitch_data.mat'], 'section')
+save([section_path filesep 'stitch_metadata.mat'], 'section')
 fprintf('Generated and saved metadata for %s.\n', section.name)
 end
 
