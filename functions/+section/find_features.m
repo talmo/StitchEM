@@ -1,6 +1,6 @@
-function features = find_section_features(section, parameters)
+function features = find_features(sec, parameters)
 %FIND_SECTION_FEATURES Finds and saves features for a given section.
-% Takes a section structure returned from initialize_section()
+import processing.find_features
 
 %% Parameters
 % Default parameters
@@ -36,8 +36,8 @@ params.z.detector_params.surf.SURFSize = 64;
 features = struct();
 
 % Load from cached file
-if exist([section.path filesep 'stitch_features.mat'], 'file')
-    cache = load([section.path filesep 'stitch_features.mat'], 'features');
+if exist(sec.features_path, 'file')
+    cache = load(sec.features_path, 'features');
     features = cache.features;
     if params.overwrite
         features = struct();
@@ -46,15 +46,15 @@ end
 
 % Initialize empty sub-structures if necessary
 if ~isfield(features, 'xy')
-     features(section.num_tiles).xy = struct();
+     features(sec.num_tiles).xy = struct();
 end
 if ~isfield(features, 'z')
-     features(section.num_tiles).z = struct();
+     features(sec.num_tiles).z = struct();
 end
 
 %% Find features in each tile
-parfor i = 1:section.num_tiles
-    tile = section.tiles(i);
+parfor i = 1:sec.num_tiles
+    tile = sec.tiles(i);
     tile_img = NaN;
     
     % Find XY features
@@ -77,7 +77,7 @@ parfor i = 1:section.num_tiles
             end
             
             % Find features in relevant region
-            [pts, desc] = find_features( ...
+            [pts, desc] = processing.find_features( ...
                 tile_img, ...
                 tile.seams.(seam_name).region, ...
                 params.xy.detector_params);
@@ -133,8 +133,12 @@ parfor i = 1:section.num_tiles
 end
 
 %% Save to cache
-save([section.path filesep 'stitch_features.mat'], 'features')
-fprintf('Saved features for %s.\n', section.name)
+save(sec.features_path, 'features')
+
+% Logging
+msg = sprintf('Saved features for %s.', sec.name);
+fprintf('%s\n', msg)
+stitch_log(msg, sec.data_path);
 
 end
 

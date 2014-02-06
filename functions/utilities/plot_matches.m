@@ -1,6 +1,5 @@
 function plot_matches(pointsA, pointsB, tile_size, overlap)
-%PLOT_MATCHES Plots point matches on top of each other and displays some
-%basic statistics on the matches.
+%PLOT_MATCHES Plots point matches on top of each other and displays some basic statistics on the matches.
 
 %% Parameters
 if nargin < 3

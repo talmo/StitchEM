@@ -1,7 +1,7 @@
 function section = initialize_section(section_path, overwrite, overlap_ratio)
 %INITIALIZE_SECTION Reads in a section folder of EM images and generates
 %metadata required for other parts of the pipeline. This data is also saved
-%to the section folder as 'stich_data.mat'.
+%as 'stitch_data.mat'.
 %
 %If the overwrite argument is not set to true or is omitted from the
 %function call, existing data files will not be overwritten.
@@ -21,8 +21,18 @@ if nargin < 3
 end
 
 %% Check for cached file
-if exist([section_path filesep 'stitch_metadata.mat'], 'file')
-    cache = load([section_path filesep 'stitch_metadata.mat'], 'section');
+% Check for trailing slash in path
+if strcmp(section_path(end), '/') || strcmp(section_path(end), '\')
+    section_path = section_path(1:end - 1);
+end
+
+% Split path
+[parent_path, section_folder] = fileparts(section_path);
+data_path = fullfile(parent_path, 'StitchData');
+cache_path = fullfile(data_path, section_folder, 'metadata.mat');
+
+if exist(cache_path, 'file')
+    cache = load(cache_path, 'section');
     % If we're not overwriting the data file, just load it and quit
     if ~overwrite
         section = cache.section;
@@ -45,18 +55,25 @@ end
 tiles = section_files(~cellfun(@isempty, regexp({section_files.name}, tile_filename_pattern)));
 
 %% General metadata about the section
-section.path = section_path;
-section.num_tiles = num_tiles;
+% Paths
+section.path = section_path;    % where tile images are located
+section.data_path = data_path;  % /StitchData
+section.section_data_path = fullfile(data_path, section_folder); % subfolder of /StitchData for this section
+section.metadata_path = cache_path;
+section.features_path = fullfile(section.section_data_path, 'features.mat');
+
+% Miscellaneous
 section.time_stamp = datestr(now);
-[~, section.name] = fileparts(section_path);
+section.num_tiles = num_tiles;
+section.name = section_folder;
 section.overlap_ratio = overlap_ratio;
 
 % Extract wafer and section numbers from the folder name
 path_tokens = regexp(section_path, 'W(?<wafer>[0-9]*)_Sec(?<sec>[0-9]*)_', 'names');
 section.wafer = path_tokens.wafer;
-section.section_number = path_tokens.sec;
+section.section_number = str2double(path_tokens.sec);
 
-%% Metadata for each tile
+%% Basic metadata for each tile
 % Initialize field
 section.tiles = struct();
 
@@ -81,7 +98,7 @@ for i = 1:num_tiles
     section.tiles(i).y_offset = (section.tiles(i).row - 1) * section.tiles(i).height * (1 - section.overlap_ratio);
 end
 
-% Figure out seams for each tile
+%% Figure out seams for each tile
 for i = 1:num_tiles
     % Initialize field
     section.tiles(i).seams = struct();
@@ -162,7 +179,23 @@ end
 
 
 %% Save the metadata to the section folder
-save([section_path filesep 'stitch_metadata.mat'], 'section')
-fprintf('Generated and saved metadata for %s.\n', section.name)
+% Check if /StitchData exists
+if ~exist(section.data_path, 'dir')
+    mkdir(section.data_path)
+end
+
+% Check if /StitchData/[this section] exists
+if ~exist(section.section_data_path, 'dir')
+    mkdir(section.section_data_path)
+end
+
+% Save to file
+save(section.metadata_path, 'section')
+
+% Logging
+msg = sprintf('Generated and saved metadata for %s.', section.name);
+fprintf('%s\n', msg)
+stitch_log(msg, section.data_path);
+
 end
 
