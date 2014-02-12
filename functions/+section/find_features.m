@@ -1,11 +1,15 @@
 function features = find_features(sec, parameters)
-%FIND_SECTION_FEATURES Finds and saves features for a given section.
+%FIND_FEATURES Finds and saves features for a given section.
 import processing.find_features
 
 %% Parameters
 % Default parameters
 params.overwrite = false;
 
+% See processing.find_features() for more info on what these do
+
+% We use a higher metric threshold for XY features since they're detected
+% at full resolution (more image data = more features)
 params.xy.find_features = true;
 params.xy.detector_params.method = 'surf';
 params.xy.detector_params.surf.MetricThreshold = 10000;
@@ -13,6 +17,8 @@ params.xy.detector_params.surf.NumOctave = 3;
 params.xy.detector_params.surf.NumScaleLevels = 4;
 params.xy.detector_params.surf.SURFSize = 64;
 
+% We use a lower metric threshold for Z features since they're resized down
+% to the scaling resolution (less image data = less features)
 params.z.find_features = true;
 params.z.scaling_resolution = 2000;
 params.z.detector_params.method = 'surf';
@@ -21,40 +27,29 @@ params.z.detector_params.surf.NumOctave = 3;
 params.z.detector_params.surf.NumScaleLevels = 4;
 params.z.detector_params.surf.SURFSize = 64;
 
-% Overwrite defaults with any parameters passed in
-% if nargin >= 2
-%     f = fieldnames(parameters); % fields
-%     for i = 1:length(f)
-%         sf = fieldnames(parameters.(f{i})); % subfields
-%         for e = 1:length(sf)
-%             params.(f{i}).(sf{e}) = parameters.(f{i}).(sf{e});
-%         end
-%     end
-% end
+% Overwrite parameters with the ones passed in
+if ~isempty(fieldnames(parameters))
+    params = parameters;
+end
 
 %% Check for cached file and initialize features structure
-features = struct();
+% Initialize empty features structure
+features(sec.num_tiles).xy = [];
+features(sec.num_tiles).z = [];
 
 % Load from cached file
-if exist(sec.features_path, 'file')
-    cache = load(sec.features_path, 'features');
-    features = cache.features;
-    if params.overwrite
-        features = struct();
-    end
-end
-
-% Initialize empty sub-structures if necessary
-if ~isfield(features, 'xy')
-     features(sec.num_tiles).xy = struct();
-end
-if ~isfield(features, 'z')
-     features(sec.num_tiles).z = struct();
+if exist(sec.xy_features_path, 'file') && exist(sec.z_features_path, 'file') && ~params.overwrite
+    features = load_features(section);
+    return
 end
 
 %% Find features in each tile
+% Slice out tiles sub-structure for better parallelization
+tiles = sec.tiles;
+
+% Parallelize feature detection on a per-tile basis
 parfor i = 1:sec.num_tiles
-    tile = sec.tiles(i);
+    tile = tiles(i);
     tile_img = NaN;
     
     % Find XY features
@@ -133,7 +128,18 @@ parfor i = 1:sec.num_tiles
 end
 
 %% Save to cache
-save(sec.features_path, 'features')
+% We have to do some shenanigans to keep the overall features structure but
+% save the individual fields (xy and z) to separate files
+full_feats = features;
+
+% Save XY features
+features = rmfield(features, 'z'); % Remove the Z features from each tile
+save(sec.xy_features_path, 'features') % Save to file (without Z features)
+
+% Save Z features
+features = full_feats;
+features = rmfield(features, 'xy');
+save(sec.z_features_path, 'features')
 
 % Logging
 msg = sprintf('Saved features for %s.', sec.name);

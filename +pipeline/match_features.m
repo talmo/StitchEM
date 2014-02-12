@@ -1,4 +1,4 @@
-function [xy_matches, z_matches] = match_all_features(sections, parameters)
+function [xy_matches, z_matches] = match_features(sections, parameters)
 %FIND_MATCHING_FEATURES Matches things!
  
 %% Parameters
