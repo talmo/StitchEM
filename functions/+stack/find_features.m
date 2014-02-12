@@ -10,6 +10,10 @@ if nargin < 2
     parameters = struct(); % Uses default parameters
 end
 
+if isa(sections, 'Stack')
+    sections = sections.sections;
+end
+
 %% Find features in each section
 % Initialize empty array of features
 features = cell(length(sections), 1);
@@ -22,7 +26,7 @@ for i = 1:length(sections)
     features{i} = section.find_features(sections{i}, parameters);
 end
 
-fprintf('Done detecting features for stack. [%.2fs]', toc)
+fprintf('Done detecting features for stack. [%.2fs]\n', toc)
 
 end
 

@@ -1,13 +1,10 @@
-function section = load(path)
+function sec = load(path)
 %LOAD Loads a section structure from cached metadata.
 % Path can be the path to any of:
 % - The direct path to the stitch_metadata.mat file for the section
 % - The folder containing the stitch data files for the section
 % - The folder containing the raw images
 % The last option assumes that the data folder is in '../StitchData'.
-
-% Initialize final path
-metadata_path = '';
 
 % This is the direct path to the section metadata
 if strfind(path, 'metadata.mat')
@@ -41,7 +38,9 @@ end
 
 % Load the section metadata file
 cache = load(metadata_path);
-section = cache.section;
+sec = cache.section;
+
+fprintf('Loaded metadata for %s (saved on %s).\n', sec.name, sec.time_stamp)
 
 end
 

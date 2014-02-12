@@ -3,6 +3,9 @@ function matches = match_features(sections, features, parameters)
 
 % This should basically be  wrapper for the XY versus Z matching steps.
 
+% matches.xy.
+
+
 %% XY Matching
 % Loop through sections
 for i = 1:length(sections)

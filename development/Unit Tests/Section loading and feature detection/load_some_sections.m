@@ -1,5 +1,5 @@
 function sections = load_some_sections(secs_to_load, overwrite)
-% Loads some section structures into 'sections' variable for convenience.
+% Loads some section structures into 'sections' array for convenience.
 
 %% Parameters
 sections_path = '/data/home/talmo/EMdata/W002';

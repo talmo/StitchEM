@@ -39,7 +39,7 @@ features(sec.num_tiles).z = [];
 
 % Load from cached file
 if exist(sec.xy_features_path, 'file') && exist(sec.z_features_path, 'file') && ~params.overwrite
-    features = load_features(section);
+    features = section.load_features(sec);
     return
 end
 
