@@ -5,14 +5,13 @@
 clear_cache % Deletes /StitchData folder
 clear
 
-wafer_folder = '/data/home/talmo/EMdata/W002';
+wafer_path = '/data/home/talmo/EMdata/W002';
 
 %% Initialize stack
 test_msg = 'Unit Test: Initialize stack';
 fprintf('%s\n%s\n', test_msg, repmat('=', 1, length(test_msg)))
 
-section_folders = find_section_folders(wafer_folder, true);
-sections = stack.initialize(section_folders);
+sections = stack.initialize(wafer_path, true);
 
 % Check results
 assert(isa(sections, 'Stack'), 'Failed: Did not get a Stack instance.');

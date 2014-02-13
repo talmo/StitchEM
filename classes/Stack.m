@@ -16,6 +16,7 @@ classdef Stack
         section_numbers
         min_section_number
         max_section_number
+        time_stamp
     end
     
     methods
@@ -56,6 +57,9 @@ classdef Stack
             % Convenience properties
             s.min_section_number = min(s.section_numbers);
             s.max_section_number = max(s.section_numbers);
+            
+            % Time stamp of when this stack was initialized
+            s.time_stamp = datestr(now);
         end
         
         function section = get_section(s, section_number)
