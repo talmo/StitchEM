@@ -1,4 +1,4 @@
-classdef Stack
+classdef Stack < handle
     %STACK This class allows you to work with a stack of sections.
     % This class provides some methods for working with a set of sections.
     % Make sure that the section objects are already initialized before
@@ -17,6 +17,8 @@ classdef Stack
         min_section_number
         max_section_number
         time_stamp
+        features
+        matches
     end
     
     methods
@@ -60,6 +62,12 @@ classdef Stack
             
             % Time stamp of when this stack was initialized
             s.time_stamp = datestr(now);
+            
+            % The features field should be empty when saved
+            s.features = {};
+            
+            % The matches field is initialized as empty
+            s.matches = struct();
         end
         
         function section = get_section(s, section_number)
@@ -71,7 +79,7 @@ classdef Stack
             
             % Check to see if it was found
             if isempty(idx)
-                error('Section with the specified section number does not exist in this stack.');
+                error('Section with section number %d does not exist in this stack.', section_number);
             end
             
             section = s.sections{idx};
@@ -81,6 +89,49 @@ classdef Stack
             % Returns the index of the specified section number in the
             % sections cell array.
             idx = find(s.section_numbers == section_number, 1);
+        end
+        
+        function load_features(s)
+            % Wrapper for the load_features function.
+            s.features = stack.load_features(s);
+        end
+        
+        function find_features(s)
+            % Wrapper for the find_features function.
+            s.features = stack.find_features(s);
+        end
+        
+        function feature_set = get_features(s, section_number)
+            % Returns the features structure with the specified section
+            % number.
+            
+            % Get the index in the cell array
+            idx = s.get_section_idx(section_number);
+            
+            % Check to see if it was found
+            if isempty(idx)
+                error('Section with section number %d does not exist in this stack.', section_number);
+            end
+            
+            % Check to see if we've loaded features for this section
+            if idx > length(s.features) || isempty(s.features{idx})
+                error('Features for this section have not been loaded.');
+            end
+            
+            feature_set = s.features{idx};
+        end
+        
+        function match_features(s)
+            % Wrapper for the match_features function.
+            s.matches = stack.match_features(s);
+        end
+        
+        function sobj = saveobj(obj)
+            % Subclasses the save function to avoid saving the huge
+            % features structure.
+            
+            sobj = obj;
+            sobj.features = {};
         end
     end
     

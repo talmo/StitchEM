@@ -3,6 +3,16 @@ function [points, descriptors] = find_features(image, region, parameters)
 
 
 %% Parameters
+
+if nargin < 2
+    region.top = 1;
+    region.left = 1;
+    region.width = size(image, 2);
+    region.height = size(image, 1);
+    
+end
+
+
 % Default parameters
 params.method = 'surf';
 params.surf.MetricThreshold = 5000;
@@ -10,9 +20,14 @@ params.surf.NumOctave = 3;
 params.surf.NumScaleLevels = 4;
 params.surf.SURFSize = 64;
 
-if isfield(parameters.surf, 'MetricThreshold')
-    params.surf.MetricThreshold = parameters.surf.MetricThreshold;
+if nargin > 2
+    if isfield(parameters.surf, 'MetricThreshold')
+        params.surf.MetricThreshold = parameters.surf.MetricThreshold;
+    end
 end
+
+
+
 % Check method
 % if nargin < 2
 %     method = 'surf';

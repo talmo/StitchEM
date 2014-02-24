@@ -18,9 +18,13 @@ params.inlier.GMReplicates = 5;
 if nargin >= 5
     f = fieldnames(parameters); % fields
     for i = 1:length(f)
-        sf = fieldnames(parameters.(f{i})); % subfields
-        for e = 1:length(sf)
-            params.(f{i}).(sf{e}) = parameters.(f{i}).(sf{e});
+        if isstruct(parameters.(f{i}))
+            sf = fieldnames(parameters.(f{i})); % subfields
+            for e = 1:length(sf)
+                params.(f{i}).(sf{e}) = parameters.(f{i}).(sf{e});
+            end
+        else
+            params.(f{i}) = parameters.(f{i});
         end
     end
 end
@@ -37,8 +41,13 @@ end
 matched_ptsA = ptsA(match_indices(:, 1), :);
 matched_ptsB = ptsB(match_indices(:, 2), :);
 
+% Check if we detected any points
+if isempty(matched_ptsA) || isempty(matched_ptsB)
+    error('Did not detect any matches using NNR matching.')
+end
+
 % Calculate the Euclidean distance between each pair of points
-distances = match_distances(matched_ptsA, matched_ptsB);
+distances = calculate_match_distances(matched_ptsA, matched_ptsB);
 
 % Use a hard cutoff for distance for inlier detection
 if strcmp(params.inlier.method, 'cutoff')
@@ -53,10 +62,15 @@ if strcmp(params.inlier.method, 'cutoff')
 elseif strcmp(params.inlier.method, 'cluster')
     % Try to fit N Gaussians
     N = params.inlier.GMClusters;
-    options = statset('Display','final');
+    
+    % Throw error instead of warning if we fail to converge during fit
+    s = warning('error', 'stats:gmdistribution:FailedToConvergeReps');
     
     % Calculate fit of Gaussian models
     fit = gmdistribution.fit(distances, N, 'Replicates', params.inlier.GMReplicates);
+    
+    % Return failure to converge to warning level
+    warning(s);
     
     % Cluster based on calculated models
     clusters_idx = cluster(fit, distances);
