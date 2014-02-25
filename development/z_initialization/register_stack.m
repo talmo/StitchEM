@@ -16,7 +16,7 @@ for i = section_numbers(1:end-1)'
         
         % Save
         merges{i} = merge;
-        output_data{i} = {[i, i + 1], tform, mean_registered_distances, theta, [tx, ty]};
+        output_data{i} = {[i, i + 1], tform, mean_registered_distances};
     catch
         disp('Failed to register sections.')
     end

@@ -45,8 +45,8 @@ tic;
 [merge, fixed_padded, registered_padded, tform, mean_registered_distances] = feature_based_registration(fixed_sec, moving_sec, params);
 toc
 % Calculate detected angle and translation
-[theta, tx, ty] = analyze_tform(tform);
-fprintf('Transform Angle: %f, Translation: [%f, %f]\n', theta, tx, ty)
+[theta, tx, ty, scale] = analyze_tform(tform);
+fprintf('Transform Angle: %f, Translation: [%f, %f], Scale: %f\n', theta, tx, ty, scale)
 %%
 % Save results
 test_data{end + 1} = {[fixed_sec, moving_sec], params, tform, mean_registered_distances, theta, [tx, ty]};

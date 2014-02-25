@@ -5,16 +5,16 @@ params.scale_ratio = 0.5;
 params.crop_ratio = 0.5;
 
 % Pre-filtering
-params.highlow_filter = true;
+params.highlow_filter = false;
 params.high_threshold = 210;
 params.low_threshold = 180;
-params.median_filter = true;
+params.median_filter = false;
 params.median_filter_radius = 3; % default = 3
 
 % Testing
 params.display_montage = true;
 params.display_matches = true;
-params.display_merges = true;
+params.display_merge = true;
 
 % Detection
 params.surf.MetricThreshold = 1000; % default = 1000
@@ -41,6 +41,7 @@ end
 
 
 %% Load stage stitched images
+
 fixed_unfiltered = imread(sprintf('/data/home/talmo/EMdata/W002/S2-W002_Sec%d_Montage/MontageOverviewImage_S2-W002_sec%d.tif', sec_num_fixed, sec_num_fixed));
 fixed_unfiltered = pre_process(fixed_unfiltered, params.scale_ratio, params.crop_ratio);
 fixed = pre_filter(fixed_unfiltered, params.highlow_filter, params.high_threshold, params.low_threshold, params.median_filter, params.median_filter_radius);

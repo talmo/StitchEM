@@ -1,4 +1,5 @@
 function [theta, tx, ty, scale] = analyze_tform(tform)
+% Infers transformation parameters from transformation matrix.
 
 % Translation
 tx = tform.T(3);
@@ -11,19 +12,16 @@ v = [0 0];
 dx = x(2) - x(1);
 dy = y(2) - y(1);
 
-% Calculate rotation
-theta = atan2d(dy, dx);
+% Calculate rotation (counterclockwise)
+theta = -atan2d(dy, dx);
 % Note about sign of angle:
-% This is the angle of clockwise rotation!
 % The theta above corresponds to the transformation matrix:
 %    [cosd(theta)  -sind(theta)  0; 
 %     sind(theta)   cosd(theta)  0;
 %     0             0            1]
-% 
-
 
 % Calculate scale
-scale = 1 / sqrt(dx^2 + dy^2);
+scale = sqrt(dx^2 + dy^2);
 
 % Alternative:
 %u = [1 0];
