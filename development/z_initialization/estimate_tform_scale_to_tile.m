@@ -9,7 +9,7 @@ params.MSAC.MaxNumTrials = 500;
 
 %% Register tile to section montage
 sec_num = 1;
-tile_num = 3;
+tile_num = 1;
 tile_scale_factor = 0.05;
 
 % Load tile and resize
@@ -45,7 +45,7 @@ fprintf('Final Scaling Factor: %f\n', final_scale_factor)
 % Visualize the registration of tile to own section montage
 sec_spatial_ref = imref2d(size(sec_montage));
 imshowpair(sec_montage, sec_spatial_ref, registered_tile, registered_spatial_ref)
-title('')
+title('Downsampled tile reigstered to own section')
 %% Test detected parameters for transformation
 % Compute new transform based on cross-section montage registration
 [theta, tx, ty, ~] = analyze_tform(sec_tform);

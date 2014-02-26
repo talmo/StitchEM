@@ -48,6 +48,11 @@ end
 tiles = section_files(~cellfun(@isempty, regexp({section_files.name}, tile_filename_pattern)));
 
 %% General metadata about the section
+% Extract wafer and section numbers from the folder name
+path_tokens = regexp(section_path, 'W(?<wafer>[0-9]*)_Sec(?<sec>[0-9]*)_', 'names');
+section.wafer = path_tokens.wafer;
+section.section_number = str2double(path_tokens.sec);
+
 % Paths
 section.path = section_path;    % where tile images are located
 section.data_path = data_path;  % /StitchData
@@ -56,17 +61,15 @@ section.metadata_path = cache_path;
 section.xy_features_path = fullfile(section.section_data_path, 'xy_features.mat');
 section.z_features_path = fullfile(section.section_data_path, 'z_features.mat');
 section.xy_matches_path = fullfile(section.section_data_path, 'xy_matches.mat');
+section.montage_overview = fullfile(section.path, sprintf('MontageOverviewImage_S2-W002_sec%d.tif', section.section_number));
+section.stage_stitch = fullfile(section.path, sprintf('StageStitched_S2-W002_sec%d.tif', section.section_number));
 
 % Miscellaneous
 section.time_stamp = datestr(now);
 section.num_tiles = num_tiles;
 section.name = section_folder;
 section.overlap_ratio = overlap_ratio;
-
-% Extract wafer and section numbers from the folder name
-path_tokens = regexp(section_path, 'W(?<wafer>[0-9]*)_Sec(?<sec>[0-9]*)_', 'names');
-section.wafer = path_tokens.wafer;
-section.section_number = str2double(path_tokens.sec);
+section.initial_tform = affine2d();
 
 %% Basic metadata for each tile
 % Initialize field
