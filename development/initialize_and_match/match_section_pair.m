@@ -4,15 +4,15 @@ secB = 2;
 
 %% Register the section overviews and get initial transforms
 % The first section is kept "fixed" relative to the second one
-secA_initial_tform = affine2d();
+secA_rough_alignment = affine2d();
 
-% Register the montage overviews
-montage_tform = register_overviews(secA, secB);
-
-% Scale up the transform by registering a tile to the montage
-secB_initial_tform = scale_montage_tform(secB, montage_tform);
+% Register the montage overviews to get a rough alignment between the sections
+secB_rough_alignment = register_overviews(secA, secB);
 
 %% Detect features in two sections
+secA_features = detect_section_features(secA, secA_rough_alignment);
+secB_features = detect_section_features(secB, secB_rough_alignment);
+
 % Resize tile
 % Detect
 % Scale points up (multiply by scaling transform?)
