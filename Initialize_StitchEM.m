@@ -4,7 +4,7 @@
 script_path = pwd;
 
 % Check if we have our critical folders
-if ~isdir('classes') || ~isdir('functions')
+if ~isdir('functions')
     response = input(['It appears this script is missing some essential folders.\n' ...
         'This may be because the program was downloaded incorrectly.\n\n' ...
         'The necessary scripts may not be in the path, do you want to continue anyway? ([Y]es/[N]o)\n'], 's');
@@ -19,3 +19,5 @@ end
 % callable from anywhere
 addpath(genpath(fullfile(script_path, 'classes')));
 addpath(genpath(fullfile(script_path, 'functions')));
+addpath(genpath(fullfile(script_path, 'development', 'utils')));
+clear script_path

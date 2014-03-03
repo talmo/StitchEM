@@ -1,32 +1,55 @@
-%% Parameters
-secA = 1;
-secB = 2;
+% Defaults for testing
+fixed_sec_num = 1;
+moving_sec_num = 2;
+visualization_scale = 0.075;
 
-%% Register the section overviews and get initial transforms
-% The first section is kept "fixed" relative to the second one
-secA_rough_alignment = affine2d();
+%% Initialize sections and load images
+disp('==== Loading sections and images.')
+secA = sec_struct(fixed_sec_num);
+secB = sec_struct(moving_sec_num);
 
-% Register the montage overviews to get a rough alignment between the sections
-secB_rough_alignment = register_overviews(secA, secB);
+%% Register montage overviews
+disp('==== Registering section overview images.')
+secA.overview_tform = affine2d();
+try
+    secB.overview_tform = register_overviews(secA.img.overview, secA.overview_tform, secB.img.overview);
+catch err
+    fprintf('Registration might have failed: %s\nDisplaying the merge.\n', err.message)
+    secB.overview_tform = register_overviews(secA.img.overview, secA.overview_tform, secB.img.overview, 'show_registration', true);
+end
 
-%% Detect features in two sections
-secA_features = detect_section_features(secA, secA_rough_alignment);
-secB_features = detect_section_features(secB, secB_rough_alignment);
+%% Do a rough alignment on the tiles using the registered overviews
+disp('==== Estimating rough tile alignments.')
+secA.rough_alignments = rough_align_tiles(secA);
+secB.rough_alignments = rough_align_tiles(secB);
 
-% Resize tile
-% Detect
-% Scale points up (multiply by scaling transform?)
-% Append to big table with info on which tile it came from
-% Table schema:
-% | id | local_point | global_point | descriptor
-% Global point has the initial transform applied to it
+%% Visualize rough alignments
+disp('==== Merging the rough tile alignments.')
+[secA_rough, secA_rough_R] = imshow_section(fixed_sec_num, secA.rough_alignments, 'tile_imgs', secA.img.tiles, 'method', 'max', 'scale', visualization_scale, 'suppress_display', true);
+[secB_rough, secB_rough_R] = imshow_section(moving_sec_num, secB.rough_alignments, 'tile_imgs', secB.img.tiles, 'method', 'max', 'scale', visualization_scale, 'suppress_display', true);
+[rough_registration, rough_registration_R] = imfuse(secA_rough, secA_rough_R, secB_rough, secB_rough_R);
+%figure, imshow(rough_registration)
+%title('Rough section registration')
+%integer_axes(1/visualization_scale)
+
+%% Detect features at full resolution
+disp('==== Detecting finer features at high resolution.')
+secA.features = detect_section_features(secA.img.tiles, secA.rough_alignments, 'section_num', secA.num);
+secB.features = detect_section_features(secB.img.tiles, secB.rough_alignments, 'section_num', secB.num);
 
 %% Match features across the two sections
-% Loop through regions (e.g., tiles)
-% Given a region, return the features (rows in the table) that are in it
-% Match the features
-% Append matches to match table
-% Table schema:
-% | id | secA | feature_idA | secB | feature_idB
+disp('==== Match finer features across sections.')
+[matchesA, matchesB, regions, region_data] = match_feature_sets(secA.features, secB.features, ...
+    'show_region_stats', false, 'verbosity', 0);
 
 %% Visualize matches
+% Show the merged rough aligned tiles
+figure, imshow(rough_registration, rough_registration_R), hold on
+
+% Show the matches
+plot_matches(matchesA.global_points, matchesB.global_points, visualization_scale)
+
+% Adjust the figure
+title(sprintf('Matches between sections %d and %d (n = %d)', secA.num, secB.num, size(matchesA, 1)))
+integer_axes(1/visualization_scale)
+hold off
