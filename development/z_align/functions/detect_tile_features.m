@@ -72,10 +72,10 @@ p = inputParser;
 p.addRequired('tile');
 
 % Pre-processing
-p.addParameter('tile_scale_ratio', 0.20);
+p.addParameter('tile_scale_ratio', 0.25);
 
 % Detection
-p.addParameter('MetricThreshold', 10000); % MATLAB default = 1000
+p.addParameter('MetricThreshold', 5000); % MATLAB default = 1000
 p.addParameter('NumOctave',  3); % MATLAB default = 3
 p.addParameter('NumScaleLevels', 4); % MATLAB default = 4
 p.addParameter('SURFSize', 64); % MATLAB default = 64

@@ -15,13 +15,18 @@ end
 
 %% Do a rough alignment on the tiles using the registered overviews
 disp('==== Estimating rough tile alignments.')
-secA.rough_alignments = rough_align_tiles(secA);
+if any(cellfun('isempty', secA.rough_alignments))
+    secA.rough_alignments = rough_align_tiles(secA);
+end
 secB.rough_alignments = rough_align_tiles(secB);
 
 %% Detect features at full resolution
 disp('==== Detecting finer features at high resolution.')
-fprintf('== Detecting features in section %d.\n', secA.num)
-secA.features = detect_section_features(secA.img.tiles, secA.rough_alignments, 'section_num', secA.num);
+if isempty(secA.features)
+    fprintf('== Detecting features in section %d.\n', secA.num)
+    secA.features = detect_section_features(secA.img.tiles, secA.rough_alignments, 'section_num', secA.num);
+end
+
 fprintf('\n== Detecting features in section %d.\n', secB.num)
 secB.features = detect_section_features(secB.img.tiles, secB.rough_alignments, 'section_num', secB.num);
 

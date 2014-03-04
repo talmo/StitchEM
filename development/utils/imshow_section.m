@@ -66,7 +66,7 @@ p.addOptional('tforms', {});
 % Name-value pairs
 p.addParameter('scale', 0.025);
 p.addParameter('suppress_display', false);
-p.addParameter('method', 'blend');
+p.addParameter('method', 'max');
 p.addParameter('tile_imgs', {});
 
 % Validate and parse input

@@ -7,6 +7,7 @@ sec.num_tiles = 16;
 sec.overview_tform = affine2d();
 sec.rough_alignments = cell(sec.num_tiles, 1);
 sec.features = table();
+sec.fine_alignments = cell(sec.num_tiles, 1);
 
 % Load montage overview
 tic;
