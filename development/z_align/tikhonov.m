@@ -1,4 +1,4 @@
-function tforms = tikhonov(matches_fixed, matches_moving, varargin)
+function [tforms, mean_error] = tikhonov(matchesA, matchesB, varargin)
 %TIKHONOV Solves a set of transformations for each tile in the match pair.
 % Registers fixed onto moving
 %
@@ -16,49 +16,62 @@ function tforms = tikhonov(matches_fixed, matches_moving, varargin)
 % Reference: Tikhonov, A. N. (1963). [Solution of incorrectly formulated problems and the regularization method].
 % Doklady Akademii Nauk SSSR 151: 501504. Translated in Soviet Mathematics 4: 10351038.
 
-[matches_fixed, matches_moving, params] = parse_inputs(matches_fixed, matches_moving, varargin{:});
+[matchesA, matchesB, params] = parse_inputs(matchesA, matchesB, varargin{:});
 
 tic
-% Calculate some stuff
-num_matches = size(matches_fixed, 1);
-base_sec = min(min(matches_fixed.section(:)), min(matches_moving.section(:)));
-num_secs = max(max(matches_fixed.section(:)), max(matches_moving.section(:))) - base_sec + 1;
+% Figure out some constants
+sec_nums = unique([unique(matchesA.section); unique(matchesB.section)]);
+num_secs = length(sec_nums);
+num_matches = size(matchesA, 1);
+tile_nums = arrayfun(@(sec) unique([matchesA.tile(matchesA.section == sec); matchesB.tile(matchesB.section == sec)]), sec_nums, 'UniformOutput', false);
+num_sec_tiles = cellfun(@(x) length(x), tile_nums);
+num_tiles = sum(num_sec_tiles);
+
+% Use indices instead of the actual tile/section number
+secIdxA = arrayfun(@(s) find(sec_nums == s), matchesA.section);
+secIdxB = arrayfun(@(s) find(sec_nums == s), matchesB.section);
+tileIdxA = cellfun(@(sec_tile) find(tile_nums{sec_tile(1)} == sec_tile(2)), num2cell([secIdxA matchesA.tile], 2));
+tileIdxB = cellfun(@(sec_tile) find(tile_nums{sec_tile(1)} == sec_tile(2)), num2cell([secIdxB matchesB.tile], 2));
 
 % Pre-allocate matrices
-A = zeros(num_matches, num_secs * params.num_tiles * 3);
-gamma = zeros(num_matches, num_secs * params.num_tiles * 3);
+A = zeros(num_matches, num_tiles * 3);
+gamma = zeros(num_matches, num_tiles * 3);
 
 % Calculate the column indices for each point
-col_fixed = (matches_fixed.section - base_sec) * params.num_tiles * 3 + (matches_fixed.tile - 1) * 3 + 1;
-col_moving = (matches_moving.section - base_sec) * params.num_tiles * 3 + (matches_moving.tile - 1) * 3 + 1;
+colA = arrayfun(@(s) sum(num_sec_tiles(1:s-1)), secIdxA) * 3 + (tileIdxA - 1) * 3 + 1;
+colB = arrayfun(@(s) sum(num_sec_tiles(1:s-1)), secIdxB) * 3 + (tileIdxB - 1) * 3 + 1;
 
 % Pad the points
-fixed_pts_padded = [matches_fixed.global_points ones(num_matches, 1)];
-moving_pts_padded = [matches_moving.global_points ones(num_matches, 1)];
+ptsA_padded = [matchesA.global_points ones(num_matches, 1)];
+ptsB_padded = [matchesB.global_points ones(num_matches, 1)];
 
 % The b vector is pretty trivial, just the moving points padded with ones
-b = moving_pts_padded;
+b = ptsB_padded;
 
 % Fill out matrices with matched points
 for i = 1:num_matches
     % Fill in row for rigidity matrix (A)
-    A(i, col_moving:col_moving+2) = moving_pts_padded(i, :);
+    A(i, colB(i):colB(i) + 2) = ptsB_padded(i, :);
     
     % Fill in row for alignment matrix (gamma)
-    gamma(i, col_moving(i):col_moving(i) + 2) = moving_pts_padded(i, :);
-    gamma(i, col_fixed(i):col_fixed(i) + 2) = -fixed_pts_padded(i, :);
+    gamma(i, colB(i):colB(i) + 2) = ptsB_padded(i, :);
+    gamma(i, colA(i):colA(i) + 2) = -ptsA_padded(i, :);
 end
 
 % Solve
 x_hat = (params.lambda .^ 2 * (A' * A) + gamma' * gamma) \ (params.lambda .^ 2 * A' * b);
-%x_hat = x_hat(:, 1:2); % drop the last column (~[0 0 1]')
+x_hat = x_hat(:, 1:2); % drop the last column (~[0 0 1]')
+
+% Sanity checking
+assert(~any(any(isnan(x_hat))))
 
 % Splice out solution into tforms
-tforms = cell(num_secs, params.num_tiles);
+tforms = cell(num_secs, max([max(matchesA.tile); max(matchesB.tile)]));
 for s = 1:num_secs
-    for t = 1:params.num_tiles
-        i = (s - 1) * params.num_tiles * 3 + (t - 1) * 3 + 1; % row in x_hat
-        tforms{s, t} = affine2d([x_hat(i:i+2, 1:2) [0 0 1]']);
+    for t = 1:length(tile_nums{s})
+        i = sum(num_sec_tiles(1:s-1)) * 3 + (t - 1) * 3 + 1; % row in x_hat
+        t2 = tile_nums{s}(t);
+        tforms{s, t2} = affine2d([x_hat(i:i+2, 1:2) [0 0 1]']);
     end
 end
 
@@ -66,8 +79,8 @@ end
 registered_ptsA = zeros(num_matches, 2);
 registered_ptsB = zeros(num_matches, 2);
 for i = 1:num_matches
-    registered_ptsA(i, :) = tforms{matches_fixed.section(i) - base_sec + 1, matches_fixed.tile(i)}.transformPointsForward(matches_fixed.global_points(i, :));
-    registered_ptsB(i, :) = tforms{matches_moving.section(i) - base_sec + 1, matches_moving.tile(i)}.transformPointsForward(matches_moving.global_points(i, :));
+    registered_ptsA(i, :) = tforms{secIdxA(i), matchesA.tile(i)}.transformPointsForward(matchesA.global_points(i, :));
+    registered_ptsB(i, :) = tforms{secIdxB(i), matchesB.tile(i)}.transformPointsForward(matchesB.global_points(i, :));
 end
 
 % Calculate registration error
@@ -78,16 +91,16 @@ fprintf('Calculated registration transforms. Registration error: %.3fpx/match. [
 
 end
 
-function [matches_fixed, matches_moving, params] = parse_inputs(matches_fixed, matches_moving, varargin)
+function [matchesA, matchesB, params] = parse_inputs(matchesA, matchesB, varargin)
 % Create inputParser instance
 p = inputParser;
 
 % Required parameters
-p.addRequired('matches_fixed');
-p.addRequired('matches_moving');
+p.addRequired('matchesA');
+p.addRequired('matchesB');
 
 % Other parameters
-p.addParameter('num_tiles', 16)
+%p.addParameter('num_tiles', 16)
 p.addParameter('lambda', 0.005);
 
 % Debugging and visualization
@@ -95,8 +108,8 @@ p.addParameter('verbosity', 0);
 p.addParameter('show_region_stats', true);
 
 % Validate and parse input
-p.parse(matches_fixed, matches_moving, varargin{:});
-matches_fixed = p.Results.matches_fixed;
-matches_moving = p.Results.matches_moving;
-params = rmfield(p.Results, {'matches_fixed', 'matches_moving'});
+p.parse(matchesA, matchesB, varargin{:});
+matchesA = p.Results.matchesA;
+matchesB = p.Results.matchesB;
+params = rmfield(p.Results, {'matchesA', 'matchesB'});
 end

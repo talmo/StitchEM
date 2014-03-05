@@ -1,8 +1,8 @@
-function [matchesA, matchesB, regions, region_data] = match_feature_sets(featuresA, featuresB, varargin)
+function [matchesA, matchesB, varargout] = match_feature_sets(featuresA, featuresB, varargin)
 %MATCH_FEATURE_SETS Returns matching points across two sections.
 
 % Parse inputs
-[featuresA, featuresB, params] = parse_inputs(featuresA, featuresB, varargin{:});
+params = parse_inputs(varargin{:});
 
 % Find bounds of area spanned by features
 xy_top_left = max([min(featuresA.global_points); min(featuresB.global_points)]);
@@ -80,53 +80,134 @@ matchesB = vertcat(matchesB{:});
 num_matches = size(matchesA, 1);
 fprintf('Done NNR matching. Found %d matching features in %d regions. [%.2fs]\n', num_matches, num_regions, toc(total_matching_time))
 
-%% GMM Clustering
+% No outliers! :(
+varargout = {[], []};
+%% Inlier filtering
 if params.filter_inliers
     tic
-    % Try to fit N Gaussians
-    N = params.GMClusters;
-
-    % Throw error instead of warning if we fail to converge during fit
-    %s = warning('error', 'stats:gmdistribution:FailedToConvergeReps');
-
-    % Calculate distances between the previous matches
-    distances = calculate_match_distances(matchesA.global_points, matchesB.global_points);
-    figure, hist(distances)
-    % Calculate fit of Gaussian models
-    fit = gmdistribution.fit(distances, N, 'Replicates', params.GMReplicates);
-
-    % Return failure to converge to warning level
-    %warning(s);
-
-    % Cluster based on calculated models
-    clusters_idx = cluster(fit, distances);
-
-    % Find cluster with lowest mean
-    cluster_means = zeros(N, 1);
-    for n = 1:N
-        cluster_means(n) = mean(distances(clusters_idx == n));
-        fprintf('Detected inlier cluster %D: n = %d, mean = %.2f\n', n, sum(clusters_idx == n), cluster_means(n))
+    grid_inliers = zeros(num_matches, 1);
+    grid_outliers = zeros(num_matches, 1);
+    
+    % Do the clustering for any grid-aligned tiles separately (they're
+    % probably mistranslated significantly)
+    if ~isempty(params.grid_aligned)
+        % Filter per tile for the first feature set
+        for i = 1:length(params.grid_aligned{1})
+            % Find matches on this tile except what we already found to be outliers
+            tile = params.grid_aligned{1}(i);
+            grid_aligned_matches = matchesA.tile == tile & ~grid_outliers;
+            
+            % Filter for inliers if there are any matches on this tile
+            if sum(grid_aligned_matches) >= 5
+                % Get the matches
+                grid_matchesA = matchesA(grid_aligned_matches, :);
+                grid_matchesB = matchesB(grid_aligned_matches, :);
+                
+                % Filter
+                [inliers_idx, outliers_idx] = filter_inliers(grid_matchesA, grid_matchesB, true, params);
+                
+                % Make logical indexing arrays
+                grid_aligned_matches_idx = find(grid_aligned_matches);
+                filtered_inliers = grid_aligned_matches; filtered_inliers(grid_aligned_matches_idx(outliers_idx)) = 0;
+                filtered_outliers = grid_aligned_matches; filtered_outliers(grid_aligned_matches_idx(inliers_idx)) = 0;
+                
+                % Aggregate with existing classifications
+                grid_inliers = grid_inliers | filtered_inliers;
+                grid_outliers = grid_outliers | filtered_outliers;
+                
+                % Sanity checking
+                assert(length(inliers_idx) + length(outliers_idx) == sum(grid_aligned_matches))
+                assert(sum(filtered_inliers) + sum(filtered_outliers) == sum(grid_aligned_matches))
+                assert(~any(arrayfun(@(i) any(outliers_idx == i), inliers_idx)))
+                assert(~any(filtered_inliers & filtered_outliers))
+                assert(~any(grid_inliers & grid_outliers))
+            end
+        end
+        
+        % Filter per tile for the second feature set
+        for i = 1:length(params.grid_aligned{2})
+            % Find matches on this tile except what we already found to be outliers
+            tile = params.grid_aligned{2}(i);
+            grid_aligned_matches = matchesB.tile == tile & ~grid_outliers;
+            
+            % Filter for inliers if there are any matches on this tile
+            if sum(grid_aligned_matches) >= 5
+                % Get the matches
+                grid_matchesA = matchesA(grid_aligned_matches, :);
+                grid_matchesB = matchesB(grid_aligned_matches, :);
+                
+                % Filter
+                [inliers_idx, outliers_idx] = filter_inliers(grid_matchesA, grid_matchesB, true, params);
+                
+                % Make logical indexing arrays
+                grid_aligned_matches_idx = find(grid_aligned_matches);
+                filtered_inliers = grid_aligned_matches; filtered_inliers(grid_aligned_matches_idx(outliers_idx)) = 0;
+                filtered_outliers = grid_aligned_matches; filtered_outliers(grid_aligned_matches_idx(inliers_idx)) = 0;
+                
+                % Aggregate with existing classifications
+                grid_inliers = grid_inliers | filtered_inliers; 
+                grid_outliers = grid_outliers | filtered_outliers;
+                
+                % Sanity checking
+                assert(length(inliers_idx) + length(outliers_idx) == sum(grid_aligned_matches))
+                assert(sum(filtered_inliers) + sum(filtered_outliers) == sum(grid_aligned_matches))
+                assert(~any(arrayfun(@(i) any(outliers_idx == i), inliers_idx)))
+                assert(~any(filtered_inliers & filtered_outliers))
+            end
+        end
+        
+        % If some matches were found to be both inliers and outliers, consider them outliers
+        ambiguous_matches = grid_inliers & grid_outliers;
+        grid_inliers(ambiguous_matches) = 0;
+        grid_outliers(ambiguous_matches) = 1;
+        
+        if params.verbosity > 0
+            fprintf('Filtered grid aligned tiles. Inliers: %d, Outliers: %d.\n', sum(grid_inliers), sum(grid_outliers))
+        end
+        
+        % Sanity checking
+        assert(sum(grid_inliers | grid_outliers) == sum(grid_inliers) + sum(grid_outliers))
+        assert(~any(grid_inliers & grid_outliers))
     end
-    [~, c] = min(cluster_means);
-
-    % Inliers are the matches in the cluster with the lowest mean
-    inlier_indices = (clusters_idx == c);
     
-    % Filter out outliers
-    matchesA = matchesA(inlier_indices, :);
-    matchesB = matchesB(inlier_indices, :);
+    % Find the rest of the matches that were from registered tiles
+    unfiltered_matches = ~(grid_inliers | grid_outliers);
+    unfilteredA = matchesA(unfiltered_matches, :);
+    unfilteredB = matchesB(unfiltered_matches, :);
     
-    fprintf('Filtered using GMM. Inliers: %d/%d. [%.2fs]\n', length(inlier_indices), num_matches, toc)
+    % Filter
+    [inliers_idx, outliers_idx] = filter_inliers(unfilteredA, unfilteredB, false, params);
+    
+    % Make logical indexing arrays
+    unfiltered_matches_idx = find(unfiltered_matches);
+    filtered_inliers = unfiltered_matches; filtered_inliers(unfiltered_matches_idx(outliers_idx)) = 0;
+    filtered_outliers = unfiltered_matches; filtered_outliers(unfiltered_matches_idx(inliers_idx)) = 0;
+    
+    % Aggregate with grid matches
+    inliers = grid_inliers | filtered_inliers;
+    outliers = grid_outliers | filtered_outliers;
+    
+    % Separate matches
+    outliersA = matchesA(outliers, :);
+    outliersB = matchesB(outliers, :);
+    matchesA = matchesA(inliers, :);
+    matchesB = matchesB(inliers, :);
+    fprintf('Filtered registered matches. Total inliers: %d/%d. [%.2fs]\n', size(matchesA, 1), num_matches, toc)
+    
+    % Sanity checking
+    assert(~any(inliers == outliers))
+    assert(sum(inliers) + sum(outliers) == num_matches)
+    varargout = {outliersA, outliersB};
 end
 
 %% Visualization
 if params.show_region_stats
-    % Show number of matches heatmap
+    % Number of matches heatmap
     figure,imagesc([xy_top_left(1), xy_bottom_right(1)], [xy_top_left(2), xy_bottom_right(2)], reshape(region_data.num_matches, size(X))), colorbar
     title('Number of matches')
     integer_axes()
 
-    % Show match distance heatmap
+    % Match distance heatmap
     figure,imagesc([xy_top_left(1), xy_bottom_right(1)], [xy_top_left(2), xy_bottom_right(2)], reshape(region_data.distances, size(X))), colorbar
     title('Average match distances (px)')
     integer_axes()
@@ -134,13 +215,114 @@ end
 
 end
 
-function [featuresA, featuresB, params] = parse_inputs(featuresA, featuresB, varargin)
+function [inliers, outliers] = filter_inliers(matchesA, matchesB, gridded, params)
+% Use Gaussian Mixture Model or k-means clustering to detect inliers based on
+% distance.
+
+% Calculate distances between the matches
+distances = calculate_match_distances(matchesA.global_points, matchesB.global_points);
+
+% Choose a filtering method
+if gridded
+    filter_method = params.filter_method_gridded;
+else
+    filter_method = params.filter_method;
+end
+
+switch filter_method
+    case 'gm'
+        try
+            [inliers, outliers] = gm_cluster(distances, params);
+        catch
+            % Fallback to k-means if it fails
+            [inliers, outliers] = k_means_cluster(distances, params);
+        end
+    case 'kmeans'
+        [inliers, outliers] = k_means_cluster(distances, params);
+end
+
+% Angle filtering
+if (~gridded && params.filter_angles) || (gridded && params.filter_angles_gridded)
+    angles = points_self_angle(matchesA.global_points, matchesB.global_points);
+    
+    while abs(min(angles(inliers)) - max(angles(inliers))) > params.angle_tolerance
+        % Get 'furthest' angle within inliers
+        [~, idx_furthest] = max(mahal(angles(inliers), angles(inliers)));
+        
+        % Remove from inliers
+        outliers = [outliers; inliers(idx_furthest)];
+        inliers(idx_furthest) = [];
+    end
+end
+
+end
+
+function [inliers, outliers] = gm_cluster(distances, params)
+% Try to fit 2 Gaussians
+N = 2;
+
+% Throw error instead of warning if we fail to converge or terminate early
+warning('error', 'stats:gmdistribution:FailedToConvergeReps')
+warning('error', 'stats:gmdistribution:IllCondCov');
+
+% Calculate fit of Gaussian models
+fit = gmdistribution.fit(distances, N, 'Replicates', params.gm_replicates);
+
+% Return messages to warning level
+warning('on', 'stats:gmdistribution:FailedToConvergeReps')
+warning('on', 'stats:gmdistribution:IllCondCov');
+
+% Cluster based on calculated models
+clusters_idx = cluster(fit, distances);
+
+% Find cluster with lowest mean
+cluster_means = zeros(N, 1);
+for n = 1:N
+    cluster_means(n) = mean(distances(clusters_idx == n));
+end
+[~, c] = min(cluster_means);
+
+% Inliers are the matches in the cluster with the lowest mean
+inliers = find(clusters_idx == c);
+outliers = find(clusters_idx ~= c);
+end
+
+function [inliers, outliers] = k_means_cluster(distances, params)
+% Two clusters: inliers and outliers
+k = 2;
+
+% Clustering
+[clusters_idx, centroids] = kmeans(distances, k, 'replicates', params.kmeans_replicates);
+
+clusters = 1:k;
+
+% Criteria for choosing the inlier cluster
+switch params.kmeans_clustering_method
+    case 'std'
+        % Cluster with the smallest standard deviation
+        stds = arrayfun(@(c) std(distances(clusters_idx == c)), clusters);
+        [~, c] = min(stds);
+    
+    case 'mean'
+        % Cluster with the smallest mean
+        means = arrayfun(@(c) mean(distances(clusters_idx == c)), clusters);
+        [~, c] = min(means);
+        
+    case 'largest'
+        % Largest cluster
+        sizes = arrayfun(@(c) length(distances(clusters_idx == c)), clusters);
+        [~, c] = max(sizes);
+end
+
+% Split up by clusters
+inliers = find(clusters_idx == c);
+outliers = find(clusters_idx ~= c);
+
+end
+
+function params = parse_inputs(varargin)
 % Create inputParser instance
 p = inputParser;
-
-% Required parameters
-p.addRequired('featuresA');
-p.addRequired('featuresB');
 
 % Regions
 p.addParameter('region_size', 1500);
@@ -152,19 +334,25 @@ p.addParameter('Metric', 'SSD'); % MATLAB default = 'SSD'
 p.addParameter('MatchThreshold', 0.9); % MATLAB default = 1.0
 p.addParameter('MaxRatio', 0.7); % MATLAB default = 0.6
 
-% GMM Clustering
+% Distance-based outlier filtering
 p.addParameter('filter_inliers', true);
-p.addParameter('GMClusters', 2); % default = 2
-p.addParameter('GMReplicates', 5); % default = 5
+p.addParameter('filter_method', 'gm'); % 'gm' or 'kmeans'
+p.addParameter('filter_method_gridded', 'kmeans'); % 'gm' or 'kmeans'
+p.addParameter('grid_aligned', {});
+p.addParameter('gm_replicates', 5); % default = 5
+p.addParameter('kmeans_replicates', 5); % default = 5
+p.addParameter('kmeans_clustering_method', 'largest'); % 'std' or 'mean' or 'largest'
 
+% Angle-based filtering
+p.addParameter('filter_angles', false);
+p.addParameter('filter_angles_gridded', true);
+p.addParameter('angle_tolerance', 15);
 
 % Debugging and visualization
 p.addParameter('verbosity', 0);
 p.addParameter('show_region_stats', true);
 
 % Validate and parse input
-p.parse(featuresA, featuresB, varargin{:});
-featuresA = p.Results.featuresA;
-featuresB = p.Results.featuresB;
-params = rmfield(p.Results, {'featuresA', 'featuresB'});
+p.parse(varargin{:});
+params = p.Results;
 end

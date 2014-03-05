@@ -49,8 +49,8 @@ if any(reg_translation > size(overview))
 end
 
 % Calculate the scaling transforms
-tform_prescale = scale_tform(params.tile_scale_ratio);
-tform_rescale = scale_tform(1 / (params.tile_scale_ratio * reg_scale));
+tform_prescale = scale_tform(params.tile_registration_scale);
+tform_rescale = scale_tform(1 / (reg_scale * params.tile_registration_scale));
 
 % Compose the final tform:
 % Prescale -> Register to overview -> Register overview to other overview -> Rescale
@@ -102,8 +102,9 @@ p.addOptional('tform_overview', affine2d());
 p.addParameter('scale_ratio', 0.5);
 p.addParameter('crop_ratio', 0.5);
 
-% Tile pre-processing
-p.addParameter('tile_scale_ratio', 0.05);
+% Scaling
+p.addParameter('tile_pre_scale', 1.0);
+p.addParameter('tile_registration_scale', 0.05);
 
 % Visualization
 p.addParameter('show_registration', false);
@@ -124,7 +125,7 @@ end
 
 function [tile, overview] = pre_process(tile_img, overview_img, params)
 % Resize
-tile = imresize(tile_img, params.tile_scale_ratio);
+tile = imresize(tile_img, 1 / params.tile_pre_scale * params.tile_registration_scale);
 overview = imresize(overview_img, params.scale_ratio);
 
 % Crop to center

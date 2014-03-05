@@ -1,83 +1,161 @@
-function varargout = imshow_section(sec_num, varargin)
+function varargout = imshow_section(sec, varargin)
 %IMSHOW_SECTION Merges tiles that are registered to the global coordinate grid by the inputted tforms.
+% Usage:
+%   IMSHOW_SECTION(sec_num)
+%   IMSHOW_SECTION(sec_struct)
+%   IMSHOW_SECTION('tile_imgs', tile_imgs)
+%   IMSHOW_SECTION('tile_imgs', tile_imgs, 'tforms', tforms)
+%   IMSHOW_SECTION(..., 'Name', Value)
+%   [merge, merge_R] = IMSHOW_SECTION(...)
+
 
 % Parse parameters
-[sec_num, tforms, params] = parse_inputs(sec_num, varargin{:});
+[tile_imgs, tforms, sec_num, params] = parse_inputs(sec, varargin{:});
+num_tiles = length(tile_imgs);
 
 total_time = tic;
-fprintf('Merging section %d into one image at %fx scale.\n', sec_num, params.scale)
+fprintf('Merging section %d at %sx scale.\n', sec_num, num2str(params.display_scale))
+
+% Adjust transforms to scale
+tform_prescale = scale_tform(1 / params.pre_scale); % scale to full resolution
+tform_rescale = scale_tform(params.display_scale); % scale back down to display resolution
+for tile_num = 1:num_tiles
+    tforms{tile_num} = affine2d(tform_prescale.T * tforms{tile_num}.T * tform_rescale.T);
+end
+
+% Calculate output spatial references
+tile_Rs = cell(num_tiles, 1);
+for tile_num = 1:num_tiles
+    tile_Rs{tile_num} = tform_spatial_ref(imref2d(size(tile_imgs{tile_num})), tforms{tile_num});
+end
+merge_R = merge_spatial_refs(tile_Rs);
 
 % Turn off warnings about bad scaling
-warning('off', 'MATLAB:nearlySingularMatrix')
+pctRunOnAll warning('off', 'MATLAB:nearlySingularMatrix')
 
-merge = [];
-for tile_num = 1:length(tforms)
-    tic
-    if length(params.tile_imgs) >= tile_num && ~isempty(params.tile_imgs{tile_num})
-        % Tile already loaded, just apply transform with resize
-        base_tform = tforms{tile_num};
-        scaling_tform = scale_tform(params.scale);
-        tform = affine2d(base_tform .T * scaling_tform.T);
-        [tile, tile_R] = imwarp(params.tile_imgs{tile_num}, tform, 'Interp', 'cubic');
-    else
-        % Load and transform tile
-        [tile, tile_R] = imshow_tile(sec_num, tile_num, tforms{tile_num}, params.scale, true);
+% Scale, transform and pad images in parallel
+final_tiles = cell(num_tiles, 1);
+pre_scale = params.pre_scale;
+display_scale = params.display_scale;
+parfor tile_num = 1:num_tiles
+    tic;
+    tile = tile_imgs{tile_num};
+    
+    % Scaling
+    if pre_scale ~= display_scale
+        tile_imgs{tile_num} = imresize(tile, display_scale / pre_scale);
     end
     
-    if isempty(merge)
-        % Initiliaze the merged image
-        merge = tile;
-        merge_R = tile_R;
-    else
-        % Merge tile to the previous merge
-        if strcmp(params.method, 'max')
-            [merge_padded,tile_padded,merge_mask,tile_mask,merge_R] = calculateOverlayImages(merge,merge_R,tile,tile_R);
-            merge = max(merge_padded, tile_padded);
-        else
-            [merge, merge_R] = imfuse(merge, merge_R, tile, tile_R, params.method);
-        end
-    end
-    fprintf('Merged tile %d. [%.2fs]\n', tile_num, toc)
+    % Transform
+    [tile, tile_R] = imwarp(tile, tforms{tile_num}, 'Interp', 'cubic');
+    
+    % Pad
+    tile = images.spatialref.internal.resampleImageToNewSpatialRef(tile, tile_R, merge_R, 'bicubic', 0);
+    
+    % Save
+    final_tiles{tile_num} = tile;
+    
+    %fprintf('Transformed tile %d. [%.2fs]\n', tile_num, toc)
 end
+
+% Merge stack of tiles
+merge = max(cat(3, final_tiles{:}), [], 3);
+
 fprintf('Done merging section. [%.2fs]\n', toc(total_time))
 
 % Turn warnings about bad scaling back on
-warning('on', 'MATLAB:nearlySingularMatrix')
+pctRunOnAll warning('on', 'MATLAB:nearlySingularMatrix')
 
+% Display the image
 if ~params.suppress_display
     imshow(merge, merge_R)
+    
+    if sec_num ~= 0
+        sec_str = [' ' num2str(sec_num)];
+    else
+        sec_str = '';
+    end
+    title(sprintf('Merged section%s (%d tiles)', sec_str, length(tile_imgs)))
+    integer_axes(1/params.display_scale)
 end
 
+% Return the merge
 if nargout > 0
     varargout = {merge, merge_R};
 end
 end
 
-function [sec_num, tforms, params] = parse_inputs(sec_num, varargin)
+function [tile_imgs, tforms, sec_num, params] = parse_inputs(sec_arg, varargin)
 % Create inputParser instance
 p = inputParser;
+p.StructExpand = false;
 
-% Required parameters
-p.addRequired('sec_num');
+% Section structure or number
+p.addOptional('sec', 0);
 
-% Optional parameters
+% Transforms to apply to tiles, otherwise they will be displayed in a grid
 p.addOptional('tforms', {});
 
-% Name-value pairs
-p.addParameter('scale', 0.025);
-p.addParameter('suppress_display', false);
-p.addParameter('method', 'max');
+% Optionally use pre-loaded/scaled tile images
 p.addParameter('tile_imgs', {});
+p.addParameter('pre_scale', 1.0);
+
+% Scaling
+p.addParameter('display_scale', 0.025);
+
+% Just returns the merge without displaying it
+p.addParameter('suppress_display', false);
+
+% Image blending method
+p.addParameter('method', 'max');
 
 % Validate and parse input
-p.parse(sec_num, varargin{:});
-sec_num = p.Results.sec_num;
+p.parse(sec_arg, varargin{:});
+sec = p.Results.sec;
+tile_imgs = p.Results.tile_imgs;
 tforms = p.Results.tforms;
-params = rmfield(p.Results, {'sec_num', 'tforms'});
+params = rmfield(p.Results, {'sec', 'tile_imgs', 'tforms'});
 
-% Initialize tiles to grid if any are missing their transforms
+% Section structure was passed in (sec_struct() output)
+if isstruct(sec)
+    sec_num = sec.num;
+    if isempty(tforms)
+        tforms = sec.rough_alignments;
+    end
+    if abs(params.display_scale - sec.tile_scale) < abs(params.display_scale - 1.0)
+        tile_imgs = sec.img.scaled_tiles;
+        params.pre_scale = sec.tile_scale;
+        fprintf('Using pre-loaded scaled tiles for section %d.\n', sec_num)
+    else
+        tile_imgs = sec.img.tiles;
+        fprintf('Using pre-loaded full tiles for section %d.\n', sec_num)
+    end
+else
+    sec_num = sec;
+end
+
+% Load (and scale) tiles if the images were not passed in
+if isempty(tile_imgs)
+    if sec_num == 0
+        error('You must either specify a section number or input an array of tile images.')
+    end
+    tic;
+    fprintf('Loading tile images for section %d...', sec_num)
+    % Load
+    tile_imgs = imload_section_tiles(sec_num, params.display_scale);
+    
+    % Adjust the pre_scale parameter
+    params.pre_scale = params.display_scale;
+    fprintf(' Done. [%.2fs]\n', toc)
+end
+
+% Initialize transform container if it's empty
+if isempty(tforms)
+    tforms = cell(length(tile_imgs), 1);
+end
+
+% Fill in any missing trasforms by aligning to grid
 if any(cellfun('isempty', tforms))
     tforms = estimate_tile_grid_alignments(tforms);
 end
-
 end

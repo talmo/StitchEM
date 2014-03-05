@@ -1,80 +1,116 @@
-function features = detect_section_features(tiles, rough_alignments, varargin)
+function features = detect_section_features(tiles, varargin)
 %DETECT_SECTION_FEATURES Detects features in all the tiles of a section.
+% Usage:
+%   features = DETECT_SECTION_FEATURES(tiles)
+%   features = DETECT_SECTION_FEATURES(tiles, pre_alignments) % pre_alignments is an array of transforms
+%   features = DETECT_SECTION_FEATURES(..., 'Name', Value)
+%
+% Name-Value pairs:
+%   'pre_scale', 1.0
+%   'detection_scale', 0.25
+%   'verbosity', 1
+% Any additional pairs will be passed to detect_tile_features().
 
 % Parse inputs
-if nargin < 2
-    rough_alignments = {};
-end
-[tiles, rough_alignments, params] = parse_inputs(tiles, rough_alignments, varargin{:});
+[tiles, pre_alignments, params, unmatched_params] = parse_inputs(tiles, varargin{:});
 
 total_time = tic;
 
-% Initialize table with empty values
-features = initialize_table(params.initial_rows);
-num_features = 0;
+% Initialize variables for parallelization
+num_tiles = length(tiles);
+local_points = cell(num_tiles, 1);
+global_points = cell(num_tiles, 1);
+descriptors = cell(num_tiles, 1);
+pre_scale = params.pre_scale;
+detection_scale = params.detection_scale;
+verbosity = params.verbosity;
+
+if verbosity > 1
+    fprintf('Initialized variables for parallelization. [%.2fs]\n', toc(total_time))
+end
 
 % Loop through tiles
-for tile_num = 1:length(tiles)
+parfor tile_num = 1:length(tiles)
+    if verbosity > 1
+        fprintf('Detecting: tile_num = %d | pre_scale = %s | detection_scale = %s \n', tile_num, num2str(pre_scale), num2str(detection_scale))
+    end
     tic;
     % Detect features in tile
-    tile_features = detect_tile_features(tiles{tile_num});
+    tile_features = detect_tile_features(tiles{tile_num}, 'pre_scale', pre_scale, 'detection_scale', detection_scale, unmatched_params);
     
-    % Indexing
-    num_tile_features = size(tile_features, 1);
-    tile_idx = ((1:num_tile_features) + num_features)';
-    num_features = num_features + num_tile_features;
+    % Save data
+    local_points{tile_num} = tile_features.local_points;
+    global_points{tile_num} = pre_alignments{tile_num}.transformPointsForward(tile_features.local_points);
+    descriptors{tile_num} = tile_features.descriptors;
     
-    % Append tile features to section table
-    features.id(tile_idx) = tile_idx;
-    features.local_points(tile_idx, :) = tile_features.local_points;
-    features.global_points(tile_idx, :) = rough_alignments{tile_num}.transformPointsForward(tile_features.local_points);
-    features.descriptors(tile_idx, :) = tile_features.descriptors;
-    features.tile(tile_idx, :) = repmat(tile_num, num_tile_features, 1);
-    
-    fprintf('Detected %d features in tile %d [%.2fs]\n', num_tile_features, tile_num, toc)
+    if verbosity > 0
+        fprintf('Detected %d features in tile %d [%.2fs]\n', length(tile_features.local_points), tile_num, toc)
+    end
 end
 
-% Drop any empty rows
-features = features(1:num_features, :);
+post_process_time = tic;
 
-% Add section column
+% Post-process output
+tile_lengths = cellfun('length', local_points);
+num_features = sum(tile_lengths);
+id = (1:num_features)';
+local_points = vertcat(local_points{:});
+global_points = vertcat(global_points{:});
+descriptors = vertcat(descriptors{:});
 section = repmat(params.section_num, num_features, 1);
-features = [features table(section)];
+tile = cell2mat(arrayfun(@(t) repmat(t, tile_lengths(t), 1), (1:length(tile_lengths))', 'UniformOutput', false));
 
-fprintf('Detected %d features total (avg %.1f / tile). [%.2fs total]\n', num_features, num_features / length(tiles), toc(total_time))
+if verbosity > 1
+    fprintf('Post-processed variables for output. [%.2fs]\n', toc(post_process_time))
+end
+
+% Build table
+features = table(id, local_points, global_points, descriptors, section, tile);
+
+fprintf('Detected %d features total (avg %.1f / tile). [%.2fs total]\n', num_features, num_features / num_tiles, toc(total_time))
 
 end
 
-function features_table = initialize_table(num_rows)
-id = zeros(num_rows, 1);
-local_points = zeros(num_rows, 2);
-global_points = zeros(num_rows, 2);
-descriptors = zeros(num_rows, 64);
-tile = zeros(num_rows, 1);
-
-features_table = table(id, local_points, global_points, descriptors, tile);
-end
-
-function [tiles, rough_alignments, params] = parse_inputs(tiles, rough_alignments, varargin)
+function [tiles, pre_alignments, params, unmatched_params] = parse_inputs(tiles, varargin)
 % Create inputParser instance
 p = inputParser;
+p.KeepUnmatched = true; % pass through to detect_tile_features
 
 % Required parameters
 p.addRequired('tiles');
 
-% Just initialize to identity if no rough alignments are passed in.
-% This means that the global points will be the same as the local points
-p.addOptional('rough_alignments', num2cell(repmat(affine2d(), length(tiles), 1)));
+% These are the transforms from any pre-alignment steps.
+% By default, transforms are initialized to identity. This means that the
+% global points will be the same as the local points.
+p.addOptional('pre_alignments', {});
 
-% Number of rows to pre-allocate to feature table
-p.addParameter('initial_rows', 50000);
-
-% The section number to add to the table
+% The section number to associate with these matches
 p.addParameter('section_num', 0);
 
+% The scale of the tile images that were inputed
+p.addParameter('pre_scale', 1.0);
+
+% The scale that we actually want to detect in (default = 0.25)
+p.addParameter('detection_scale', 0.25);
+
+% Debugging
+p.addParameter('verbosity', 1);
+
 % Validate and parse input
-p.parse(tiles, rough_alignments, varargin{:});
+p.parse(tiles, varargin{:});
 tiles = p.Results.tiles;
-rough_alignments = p.Results.rough_alignments;
-params = rmfield(p.Results, {'tiles', 'rough_alignments'});
+pre_alignments = p.Results.pre_alignments;
+params = rmfield(p.Results, {'tiles', 'pre_alignments'});
+unmatched_params = p.Unmatched;
+
+% Initialize transform container if it's empty
+if isempty(pre_alignments)
+    pre_alignments = cell(length(tiles), 1);
+end
+
+% Fill in any missing trasforms by aligning to grid
+if any(cellfun('isempty', pre_alignments))
+    pre_alignments = estimate_tile_grid_alignments(pre_alignments);
+end
+
 end

@@ -3,7 +3,8 @@ fprintf('== Aligning tiles for section %d.\n', sec.num)
 
 % Slice out variables needed in loop
 sec_num = sec.num;
-tiles = sec.img.tiles;
+tiles = sec.img.scaled_tiles;
+tile_scale = sec.tile_scale;
 overview = sec.img.overview;
 overview_tform = sec.overview_tform;
 
@@ -12,9 +13,8 @@ rough_alignments = cell(sec.num_tiles, 1);
 parfor tile_num = 1:sec.num_tiles
     tic;
     try
-        rough_alignments{tile_num} = estimate_tile_alignment(tiles{tile_num}, overview, overview_tform);
-    catch err
-        %fprintf('%sCould not estimate alignment for section %d -> tile %d.\n\n', err.message, sec_num, tile_num)
+        rough_alignments{tile_num} = estimate_tile_alignment(tiles{tile_num}, overview, overview_tform, 'tile_pre_scale', tile_scale);
+    catch
         fprintf('Failed to register section %d -> tile %d to its overview. [%.2fs]\n', sec_num, tile_num, toc)
         continue
     end

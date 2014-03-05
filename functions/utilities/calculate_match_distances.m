@@ -5,6 +5,13 @@ if nargin < 3
     benchmark = false;
 end
 
+if istable(pointsA)
+    pointsA = pointsA.global_points;
+end
+if istable(pointsB)
+    pointsB = pointsB.global_points;
+end
+
 if benchmark
     % Most straightforward way:
     tic

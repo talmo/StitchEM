@@ -1,46 +1,62 @@
-function imshow_tile_features(section_num, tile_num, features, varargin)
+function imshow_tile_features(tile_img, features, varargin)
 %IMSHOW_TILE_FEATURES Shows a tile and its features.
+% Usage:
+%   IMSHOW_TILE_FEATURES(tile_img, local_points)
+%   IMSHOW_TILE_FEATURES(tile_img, features) % will plot local_points
+%   IMSHOW_TILE_FEATURES(..., 'Name', Value)
+%
+% Name-Value Pairs:
+%   display_scale (default = 0.25): Scale to display the tile and points in
+%   pre_scale (default = 1.0): Scale the inputed tile image is in
 
-%% Parameters
-% Defaults
-scale = 1.0;
+% TODO:
+%   IMSHOW_TILE_FEATURES(sec_num, tile_num, local_points)
+%   IMSHOW_TILE_FEATURES(sec_struct, tile_num, local_points)
+%   IMSHOW_TILE_FEATURES(sec_num, tile_num, local_points)
+%   IMSHOW_TILE_FEATURES(sec_num, tile_num, features) % will plot local_points
 
-% Hackish overwriting defaults for scale (see imshow_tile too)
-if ~isempty(varargin)
-    for i = 1:length(varargin)
-        if isnumeric(varargin{i})
-            scale = varargin{i};
-        end
-    end
+% Parse parameters
+[tile_img, points, params] = parse_inputs(tile_img, features, varargin{:});
+
+% Resize the tile if needed
+if params.pre_scale ~= params.display_scale
+    tile_img = imresize(tile_img, params.pre_scale * params.display_scale);
 end
 
+% Display the tile
+imshow(tile_img), hold on
+
+% Plot points
+plot_features(points, params.display_scale);
+
+% Adjust plot
+title(sprintf('Tile features (n = %d)', size(points, 1)))
+integer_axes(1/params.display_scale);
+hold off
+end
+
+function [tile_img, points, params] = parse_inputs(tile_img, features, varargin)
+% Create inputParser instance
+p = inputParser;
+
+% Required parameters
+p.addRequired('tile_img');
+p.addRequired('features');
+
+% Scaling
+p.addParameter('display_scale', 0.25);
+p.addParameter('pre_scale', 1.0);
+
+% Validate and parse input
+p.parse(tile_img, features, varargin{:});
+tile_img = p.Results.tile_img;
+features = p.Results.features;
+params = rmfield(p.Results, {'tile_img', 'features'});
+
+% Pull out local features if needed
 if istable(features)
-    if any(ismember(features.Properties.VariableNames, 'local_points'))
-        points = features.local_points;
-    else
-        error('Could not find a local_points column in the features table.')
-    end
+    points = features.local_points;
 else
     points = features;
 end
-
-if ~isnumeric(points) || size(points, 2) ~= 2
-    error('Points must be an Nx2 numeric array of coordinates.')
 end
-
-
-%% Show tile with points
-% Display the tile
-imshow_tile(section_num, tile_num, varargin{:});
-
-% Scale points if needed
-if scale ~= 1.0
-    points = transformPointsForward(scale_tform(scale), points);
-end
-
-% Plot the features
-hold on
-plot(points(:, 1), points(:, 2), 'rx')
-
-end
-

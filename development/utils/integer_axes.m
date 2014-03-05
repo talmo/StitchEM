@@ -15,5 +15,7 @@ yticks = get(gca, 'ytick') * scale;
 set(gca, 'xticklabel', xticks)
 set(gca, 'yticklabel', yticks)
 
+set(gca, 'Visible', 'on')
+
 end
 
