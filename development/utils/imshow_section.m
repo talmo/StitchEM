@@ -16,9 +16,9 @@ num_tiles = length(tile_imgs);
 total_time = tic;
 fprintf('Merging section %d at %sx scale.\n', sec_num, num2str(params.display_scale))
 
-% Adjust transforms to scale
-tform_prescale = scale_tform(1 / params.pre_scale); % scale to full resolution
-tform_rescale = scale_tform(params.display_scale); % scale back down to display resolution
+% Adjust transforms to display scale
+tform_prescale = scale_tform(1 / params.display_scale); % scale to full resolution assuming we start at display scale
+tform_rescale = scale_tform(params.display_scale); % scale back down to display scale
 for tile_num = 1:num_tiles
     tforms{tile_num} = affine2d(tform_prescale.T * tforms{tile_num}.T * tform_rescale.T);
 end
@@ -26,7 +26,8 @@ end
 % Calculate output spatial references
 tile_Rs = cell(num_tiles, 1);
 for tile_num = 1:num_tiles
-    tile_Rs{tile_num} = tform_spatial_ref(imref2d(size(tile_imgs{tile_num})), tforms{tile_num});
+    tile_size = size(tile_imgs{tile_num}) * (1 / params.pre_scale) * params.display_scale;
+    tile_Rs{tile_num} = tform_spatial_ref(imref2d(tile_size), tforms{tile_num});
 end
 merge_R = merge_spatial_refs(tile_Rs);
 
@@ -41,9 +42,9 @@ parfor tile_num = 1:num_tiles
     tic;
     tile = tile_imgs{tile_num};
     
-    % Scaling
+    % Scale tile to display scale
     if pre_scale ~= display_scale
-        tile_imgs{tile_num} = imresize(tile, display_scale / pre_scale);
+        tile = imresize(tile, (1 / pre_scale) * display_scale);
     end
     
     % Transform
@@ -119,16 +120,18 @@ params = rmfield(p.Results, {'sec', 'tile_imgs', 'tforms'});
 % Section structure was passed in (sec_struct() output)
 if isstruct(sec)
     sec_num = sec.num;
+    fprintf('Merging pre-loaded section %d.\n', sec_num)
     if isempty(tforms)
         tforms = sec.rough_alignments;
+        disp('Using rough alignments to display tiles.')
     end
     if abs(params.display_scale - sec.tile_scale) < abs(params.display_scale - 1.0)
         tile_imgs = sec.img.scaled_tiles;
         params.pre_scale = sec.tile_scale;
-        fprintf('Using pre-loaded scaled tiles for section %d.\n', sec_num)
+        fprintf('Using pre-scaled tiles at %sx scale.\n', num2str(sec.tile_scale))
     else
         tile_imgs = sec.img.tiles;
-        fprintf('Using pre-loaded full tiles for section %d.\n', sec_num)
+        disp('Using full resolution tiles.')
     end
 else
     sec_num = sec;

@@ -75,19 +75,33 @@ for s = 1:num_secs
     end
 end
 
-% Apply transforms to moving points
-registered_ptsA = zeros(num_matches, 2);
-registered_ptsB = zeros(num_matches, 2);
-for i = 1:num_matches
-    registered_ptsA(i, :) = tforms{secIdxA(i), matchesA.tile(i)}.transformPointsForward(matchesA.global_points(i, :));
-    registered_ptsB(i, :) = tforms{secIdxB(i), matchesB.tile(i)}.transformPointsForward(matchesB.global_points(i, :));
+
+% Transform matching points to estimate error
+registered_ptsA = zeros(size(matchesA, 1), 2);
+registered_ptsB = zeros(size(matchesB, 1), 2);
+for s = 1:num_secs
+    for t = 1:num_sec_tiles(s)
+        idxA = secIdxA == s & tileIdxA == t;
+        global_pointsA = matchesA.global_points(idxA, :);
+        if ~isempty(global_pointsA)
+            registered_ptsA(idxA, 1:2) = tforms{s, tile_nums{s}(t)}.transformPointsForward(global_pointsA);
+        end
+        
+        idxB = secIdxB == s & tileIdxB == t;
+        global_pointsB = matchesB.global_points(idxB, :);
+        if ~isempty(global_pointsB)
+            registered_ptsB(idxB, 1:2) = tforms{s, tile_nums{s}(t)}.transformPointsForward(global_pointsB);
+        end
+    end
 end
 
 % Calculate registration error
 distances = calculate_match_distances(registered_ptsA, registered_ptsB);
 mean_error = sum(distances) / num_matches;
 
-fprintf('Calculated registration transforms. Registration error: %.3fpx/match. [%.2fs]\n', mean_error, toc)
+if params.verbosity > 0
+    fprintf('Calculated registration transforms. Registration error: %.3fpx/match. [%.2fs]\n', mean_error, toc)
+end
 
 end
 
@@ -100,12 +114,10 @@ p.addRequired('matchesA');
 p.addRequired('matchesB');
 
 % Other parameters
-%p.addParameter('num_tiles', 16)
 p.addParameter('lambda', 0.005);
 
 % Debugging and visualization
-p.addParameter('verbosity', 0);
-p.addParameter('show_region_stats', true);
+p.addParameter('verbosity', 1);
 
 % Validate and parse input
 p.parse(matchesA, matchesB, varargin{:});

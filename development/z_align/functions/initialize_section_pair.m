@@ -4,33 +4,50 @@ function [secA, secB, varargout] = initialize_section_pair(fixed_sec, moving_sec
 
 %% Parse inputs
 % Also loads images if needed
-[secA, secB, params] = parse_inputs(fixed_sec, moving_sec, varargin{:});
+[secA, secB, params, unmatched_params] = parse_inputs(fixed_sec, moving_sec, varargin{:});
 
 %% Register montage overviews
 disp('==== Registering section overview images.')
-try
-    secB.overview_tform = register_overviews(secA.img.overview, secA.overview_tform, secB.img.overview);
-    disp('Registered the two section overviews.')
-catch
-    disp('Failed to register the two section overviews. Tiles will be aligned to grid.')
+if all(all(secB.overview_tform.T == affine2d().T)) || params.overwrite_overview_registration
+    try
+        secB.overview_tform = register_overviews(secA.img.overview, secA.overview_tform, secB.img.overview);
+        disp('Registered the two section overviews.')
+    catch
+        disp('Failed to register the two section overviews. Sections will not be aligned.')
+    end
+else
+    disp('Sections overviews are already registered.')
 end
 
 %% Do a rough alignment on the tiles using the registered overviews
 disp('==== Estimating rough tile alignments.')
-if any(cellfun('isempty', secA.rough_alignments))
+
+if any(cellfun('isempty', secA.rough_alignments)) || params.overwrite_rough_alignments
     [secA.rough_alignments, secA.grid_aligned] = rough_align_tiles(secA);
+else
+    fprintf('Section %d is already roughly aligned.\n', secA.num)
 end
-[secB.rough_alignments, secB.grid_aligned] = rough_align_tiles(secB);
+if any(cellfun('isempty', secB.rough_alignments)) || params.overwrite_rough_alignments
+    [secB.rough_alignments, secB.grid_aligned] = rough_align_tiles(secB);
+else
+    fprintf('Section %d is already roughly aligned.\n', secB.num)
+end
 
 %% Detect features at full resolution
 disp('==== Detecting finer features at high resolution.')
-if isempty(secA.features)
+if isempty(secA.features) || params.overwrite_features
     fprintf('== Detecting features in section %d.\n', secA.num)
-    secA.features = detect_section_features(secA.img.tiles, secA.rough_alignments, 'section_num', secA.num);
+    secA.features = detect_section_features(secA.img.tiles, secA.rough_alignments, 'section_num', secA.num, unmatched_params);
+else
+    fprintf('Section %d already has features detected.\n', secA.num)
 end
 
-fprintf('\n== Detecting features in section %d.\n', secB.num)
-secB.features = detect_section_features(secB.img.tiles, secB.rough_alignments, 'section_num', secB.num);
+if isempty(secB.features) || params.overwrite_features
+    fprintf('== Detecting features in section %d.\n', secB.num)
+    secB.features = detect_section_features(secB.img.tiles, secB.rough_alignments, 'section_num', secB.num, unmatched_params);
+else
+    fprintf('Section %d already has features detected.\n', secB.num)
+end
 
 %% Visualize matches
 if params.show_merge || params.render_merge
@@ -52,13 +69,19 @@ if params.show_merge || params.render_merge
 end
 end
 
-function [secA, secB, params] = parse_inputs(fixed_sec, moving_sec, varargin)
+function [secA, secB, params, unmatched] = parse_inputs(fixed_sec, moving_sec, varargin)
 % Create inputParser instance
 p = inputParser;
+p.KeepUnmatched = true;
 
 % Required parameters
 p.addRequired('fixed_sec');
 p.addRequired('moving_sec');
+
+% Overwrites
+p.addParameter('overwrite_overview_registration', false);
+p.addParameter('overwrite_rough_alignments', false);
+p.addParameter('overwrite_features', false);
 
 % Visualization
 p.addParameter('show_merge', false);
@@ -70,6 +93,7 @@ p.parse(fixed_sec, moving_sec, varargin{:});
 secA = p.Results.fixed_sec;
 secB = p.Results.moving_sec;
 params = rmfield(p.Results, {'fixed_sec', 'moving_sec'});
+unmatched = p.Unmatched;
 
 % Load images
 if ~isstruct(secA)

@@ -16,12 +16,12 @@ sec_num = 100;
 
 %% Match them
 % Match first pair
-[matchesAB, matchesBA, outliersAB, outliersBA, mergeAB, mergeAB_R] = match_section_pair(secA, secB, 'show_matches', true);
+[matchesAB, matchesBA, outliersAB, outliersBA, mergeAB, mergeAB_R] = match_section_pair(secA, secB, 'show_matches', true, 'MatchThreshold', 1.0, 'filter_inliers', false);
 match_statsAB = matching_stats(matchesAB, matchesBA, outliersAB, outliersBA);
 disp(match_statsAB.tile_summary)
-
+%%
 % Match second pair
-[matchesBC, matchesCB, outliersBC, outliersCB, mergeBC, mergeBC_R] = match_section_pair(secB, secC, 'show_matches', true);
+[matchesBC, matchesCB, outliersBC, outliersCB, mergeBC, mergeBC_R] = match_section_pair(secB, secC, 'show_matches', true, 'MatchThreshold', 1.0);
 match_statsBC = matching_stats(matchesBC, matchesCB, outliersAB, outliersBA);
 disp(match_statsBC.tile_summary)
 %% Registration

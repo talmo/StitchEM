@@ -1,4 +1,4 @@
-function [matchesA, matchesB, varargout] = match_feature_sets(featuresA, featuresB, varargin)
+function [matchesA, matchesB, regions, outliersA, outliersB] = match_feature_sets(featuresA, featuresB, varargin)
 %MATCH_FEATURE_SETS Returns matching points across two sections.
 
 % Parse inputs
@@ -80,125 +80,127 @@ matchesB = vertcat(matchesB{:});
 num_matches = size(matchesA, 1);
 fprintf('Done NNR matching. Found %d matching features in %d regions. [%.2fs]\n', num_matches, num_regions, toc(total_matching_time))
 
-% No outliers! :(
-varargout = {[], []};
+
 %% Inlier filtering
-if params.filter_inliers
-    tic
-    grid_inliers = zeros(num_matches, 1);
-    grid_outliers = zeros(num_matches, 1);
-    
-    % Do the clustering for any grid-aligned tiles separately (they're
-    % probably mistranslated significantly)
-    if ~isempty(params.grid_aligned)
-        % Filter per tile for the first feature set
-        for i = 1:length(params.grid_aligned{1})
-            % Find matches on this tile except what we already found to be outliers
-            tile = params.grid_aligned{1}(i);
-            grid_aligned_matches = matchesA.tile == tile & ~grid_outliers;
-            
-            % Filter for inliers if there are any matches on this tile
-            if sum(grid_aligned_matches) >= 5
-                % Get the matches
-                grid_matchesA = matchesA(grid_aligned_matches, :);
-                grid_matchesB = matchesB(grid_aligned_matches, :);
-                
-                % Filter
-                [inliers_idx, outliers_idx] = filter_inliers(grid_matchesA, grid_matchesB, true, params);
-                
-                % Make logical indexing arrays
-                grid_aligned_matches_idx = find(grid_aligned_matches);
-                filtered_inliers = grid_aligned_matches; filtered_inliers(grid_aligned_matches_idx(outliers_idx)) = 0;
-                filtered_outliers = grid_aligned_matches; filtered_outliers(grid_aligned_matches_idx(inliers_idx)) = 0;
-                
-                % Aggregate with existing classifications
-                grid_inliers = grid_inliers | filtered_inliers;
-                grid_outliers = grid_outliers | filtered_outliers;
-                
-                % Sanity checking
-                assert(length(inliers_idx) + length(outliers_idx) == sum(grid_aligned_matches))
-                assert(sum(filtered_inliers) + sum(filtered_outliers) == sum(grid_aligned_matches))
-                assert(~any(arrayfun(@(i) any(outliers_idx == i), inliers_idx)))
-                assert(~any(filtered_inliers & filtered_outliers))
-                assert(~any(grid_inliers & grid_outliers))
-            end
-        end
-        
-        % Filter per tile for the second feature set
-        for i = 1:length(params.grid_aligned{2})
-            % Find matches on this tile except what we already found to be outliers
-            tile = params.grid_aligned{2}(i);
-            grid_aligned_matches = matchesB.tile == tile & ~grid_outliers;
-            
-            % Filter for inliers if there are any matches on this tile
-            if sum(grid_aligned_matches) >= 5
-                % Get the matches
-                grid_matchesA = matchesA(grid_aligned_matches, :);
-                grid_matchesB = matchesB(grid_aligned_matches, :);
-                
-                % Filter
-                [inliers_idx, outliers_idx] = filter_inliers(grid_matchesA, grid_matchesB, true, params);
-                
-                % Make logical indexing arrays
-                grid_aligned_matches_idx = find(grid_aligned_matches);
-                filtered_inliers = grid_aligned_matches; filtered_inliers(grid_aligned_matches_idx(outliers_idx)) = 0;
-                filtered_outliers = grid_aligned_matches; filtered_outliers(grid_aligned_matches_idx(inliers_idx)) = 0;
-                
-                % Aggregate with existing classifications
-                grid_inliers = grid_inliers | filtered_inliers; 
-                grid_outliers = grid_outliers | filtered_outliers;
-                
-                % Sanity checking
-                assert(length(inliers_idx) + length(outliers_idx) == sum(grid_aligned_matches))
-                assert(sum(filtered_inliers) + sum(filtered_outliers) == sum(grid_aligned_matches))
-                assert(~any(arrayfun(@(i) any(outliers_idx == i), inliers_idx)))
-                assert(~any(filtered_inliers & filtered_outliers))
-            end
-        end
-        
-        % If some matches were found to be both inliers and outliers, consider them outliers
-        ambiguous_matches = grid_inliers & grid_outliers;
-        grid_inliers(ambiguous_matches) = 0;
-        grid_outliers(ambiguous_matches) = 1;
-        
-        if params.verbosity > 0
-            fprintf('Filtered grid aligned tiles. Inliers: %d, Outliers: %d.\n', sum(grid_inliers), sum(grid_outliers))
-        end
-        
-        % Sanity checking
-        assert(sum(grid_inliers | grid_outliers) == sum(grid_inliers) + sum(grid_outliers))
-        assert(~any(grid_inliers & grid_outliers))
-    end
-    
-    % Find the rest of the matches that were from registered tiles
-    unfiltered_matches = ~(grid_inliers | grid_outliers);
-    unfilteredA = matchesA(unfiltered_matches, :);
-    unfilteredB = matchesB(unfiltered_matches, :);
-    
-    % Filter
-    [inliers_idx, outliers_idx] = filter_inliers(unfilteredA, unfilteredB, false, params);
-    
-    % Make logical indexing arrays
-    unfiltered_matches_idx = find(unfiltered_matches);
-    filtered_inliers = unfiltered_matches; filtered_inliers(unfiltered_matches_idx(outliers_idx)) = 0;
-    filtered_outliers = unfiltered_matches; filtered_outliers(unfiltered_matches_idx(inliers_idx)) = 0;
-    
-    % Aggregate with grid matches
-    inliers = grid_inliers | filtered_inliers;
-    outliers = grid_outliers | filtered_outliers;
-    
-    % Separate matches
-    outliersA = matchesA(outliers, :);
-    outliersB = matchesB(outliers, :);
-    matchesA = matchesA(inliers, :);
-    matchesB = matchesB(inliers, :);
-    fprintf('Filtered registered matches. Total inliers: %d/%d. [%.2fs]\n', size(matchesA, 1), num_matches, toc)
-    
-    % Sanity checking
-    assert(~any(inliers == outliers))
-    assert(sum(inliers) + sum(outliers) == num_matches)
-    varargout = {outliersA, outliersB};
+if ~params.filter_inliers
+    outliersA = [];
+    outliersB = [];
+    return
 end
+
+tic
+grid_inliers = zeros(num_matches, 1);
+grid_outliers = zeros(num_matches, 1);
+
+% Do the clustering for any grid-aligned tiles separately (they're
+% probably mistranslated significantly)
+if ~isempty(params.grid_aligned)
+    % Filter per tile for the first feature set
+    for i = 1:length(params.grid_aligned{1})
+        % Find matches on this tile except what we already found to be outliers
+        tile = params.grid_aligned{1}(i);
+        grid_aligned_matches = matchesA.tile == tile & ~grid_outliers;
+
+        % Filter for inliers if there are any matches on this tile
+        if sum(grid_aligned_matches) >= 5
+            % Get the matches
+            grid_matchesA = matchesA(grid_aligned_matches, :);
+            grid_matchesB = matchesB(grid_aligned_matches, :);
+
+            % Filter
+            [inliers_idx, outliers_idx] = filter_inliers(grid_matchesA, grid_matchesB, true, params);
+
+            % Make logical indexing arrays
+            grid_aligned_matches_idx = find(grid_aligned_matches);
+            filtered_inliers = grid_aligned_matches; filtered_inliers(grid_aligned_matches_idx(outliers_idx)) = 0;
+            filtered_outliers = grid_aligned_matches; filtered_outliers(grid_aligned_matches_idx(inliers_idx)) = 0;
+
+            % Aggregate with existing classifications
+            grid_inliers = grid_inliers | filtered_inliers;
+            grid_outliers = grid_outliers | filtered_outliers;
+
+            % Sanity checking
+            assert(length(inliers_idx) + length(outliers_idx) == sum(grid_aligned_matches))
+            assert(sum(filtered_inliers) + sum(filtered_outliers) == sum(grid_aligned_matches))
+            assert(~any(arrayfun(@(i) any(outliers_idx == i), inliers_idx)))
+            assert(~any(filtered_inliers & filtered_outliers))
+            assert(~any(grid_inliers & grid_outliers))
+        end
+    end
+
+    % Filter per tile for the second feature set
+    for i = 1:length(params.grid_aligned{2})
+        % Find matches on this tile except what we already found to be outliers
+        tile = params.grid_aligned{2}(i);
+        grid_aligned_matches = matchesB.tile == tile & ~grid_outliers;
+
+        % Filter for inliers if there are any matches on this tile
+        if sum(grid_aligned_matches) >= 5
+            % Get the matches
+            grid_matchesA = matchesA(grid_aligned_matches, :);
+            grid_matchesB = matchesB(grid_aligned_matches, :);
+
+            % Filter
+            [inliers_idx, outliers_idx] = filter_inliers(grid_matchesA, grid_matchesB, true, params);
+
+            % Make logical indexing arrays
+            grid_aligned_matches_idx = find(grid_aligned_matches);
+            filtered_inliers = grid_aligned_matches; filtered_inliers(grid_aligned_matches_idx(outliers_idx)) = 0;
+            filtered_outliers = grid_aligned_matches; filtered_outliers(grid_aligned_matches_idx(inliers_idx)) = 0;
+
+            % Aggregate with existing classifications
+            grid_inliers = grid_inliers | filtered_inliers; 
+            grid_outliers = grid_outliers | filtered_outliers;
+
+            % Sanity checking
+            assert(length(inliers_idx) + length(outliers_idx) == sum(grid_aligned_matches))
+            assert(sum(filtered_inliers) + sum(filtered_outliers) == sum(grid_aligned_matches))
+            assert(~any(arrayfun(@(i) any(outliers_idx == i), inliers_idx)))
+            assert(~any(filtered_inliers & filtered_outliers))
+        end
+    end
+
+    % If some matches were found to be both inliers and outliers, consider them outliers
+    ambiguous_matches = grid_inliers & grid_outliers;
+    grid_inliers(ambiguous_matches) = 0;
+    grid_outliers(ambiguous_matches) = 1;
+
+    if params.verbosity > 0
+        fprintf('Filtered grid aligned tiles. Inliers: %d, Outliers: %d.\n', sum(grid_inliers), sum(grid_outliers))
+    end
+
+    % Sanity checking
+    assert(sum(grid_inliers | grid_outliers) == sum(grid_inliers) + sum(grid_outliers))
+    assert(~any(grid_inliers & grid_outliers))
+end
+
+% Find the rest of the matches that were from registered tiles
+unfiltered_matches = ~(grid_inliers | grid_outliers);
+unfilteredA = matchesA(unfiltered_matches, :);
+unfilteredB = matchesB(unfiltered_matches, :);
+
+% Filter
+[inliers_idx, outliers_idx] = filter_inliers(unfilteredA, unfilteredB, false, params);
+
+% Make logical indexing arrays
+unfiltered_matches_idx = find(unfiltered_matches);
+filtered_inliers = unfiltered_matches; filtered_inliers(unfiltered_matches_idx(outliers_idx)) = 0;
+filtered_outliers = unfiltered_matches; filtered_outliers(unfiltered_matches_idx(inliers_idx)) = 0;
+
+% Aggregate with grid matches
+inliers = grid_inliers | filtered_inliers;
+outliers = grid_outliers | filtered_outliers;
+
+% Separate matches
+outliersA = matchesA(outliers, :);
+outliersB = matchesB(outliers, :);
+matchesA = matchesA(inliers, :);
+matchesB = matchesB(inliers, :);
+fprintf('Filtered registered matches. Total inliers: %d/%d. [%.2fs]\n', size(matchesA, 1), num_matches, toc)
+
+% Sanity checking
+assert(~any(inliers == outliers))
+assert(sum(inliers) + sum(outliers) == num_matches)
 
 %% Visualization
 if params.show_region_stats
@@ -350,7 +352,7 @@ p.addParameter('angle_tolerance', 15);
 
 % Debugging and visualization
 p.addParameter('verbosity', 0);
-p.addParameter('show_region_stats', true);
+p.addParameter('show_region_stats', false);
 
 % Validate and parse input
 p.parse(varargin{:});
