@@ -88,6 +88,9 @@ p.addParameter('show_merge', false);
 p.addParameter('render_merge', false);
 p.addParameter('visualization_scale', 0.075);
 
+% Tile scaling (if it will be loaded)
+p.addParameter('tile_resize_scale', 0.25); % ideally this should be the feature detection scale so we don't have to resize again
+
 % Validate and parse input
 p.parse(fixed_sec, moving_sec, varargin{:});
 secA = p.Results.fixed_sec;
@@ -97,9 +100,9 @@ unmatched = p.Unmatched;
 
 % Load images
 if ~isstruct(secA)
-    secA = sec_struct(secA);
+    secA = sec_struct(secA, params.tile_resize_scale);
 end
 if ~isstruct(secB)
-    secB = sec_struct(secB);
+    secB = sec_struct(secB, params.tile_resize_scale);
 end
 end

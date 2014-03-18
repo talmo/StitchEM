@@ -1,4 +1,4 @@
-sec_num = 2;
+sec_num = 100;
 
 % Load images
 secA = sec_struct(sec_num, 0.125);

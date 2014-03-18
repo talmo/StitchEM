@@ -5,7 +5,7 @@ function sec = sec_struct(sec_num, tile_scale)
 %   sec = SEC_STRUCT(sec_num, tile_scale)
 
 if nargin < 2
-    tile_scale = 0.25; % for feature detection
+    tile_scale = 0.25;  % ideally this should be the feature detection scale so we don't have to resize again
 end
 
 fprintf('== Loading section %d.\n', sec_num)

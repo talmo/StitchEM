@@ -121,9 +121,12 @@ params = rmfield(p.Results, {'sec', 'tile_imgs', 'tforms'});
 if isstruct(sec)
     sec_num = sec.num;
     fprintf('Merging pre-loaded section %d.\n', sec_num)
-    if isempty(tforms)
+    if isempty(tforms) || strcmp(tforms, 'rough')
         tforms = sec.rough_alignments;
         disp('Using rough alignments to display tiles.')
+    elseif strcmp(tforms, 'fine')
+        tforms = sec.fine_alignments;
+        disp('Using fine alignments to display tiles.')
     end
     if abs(params.display_scale - sec.tile_scale) < abs(params.display_scale - 1.0)
         tile_imgs = sec.img.scaled_tiles;
