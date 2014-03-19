@@ -13,7 +13,7 @@ if all(all(secB.overview_tform.T == affine2d().T)) || params.overwrite_overview_
         secB.overview_tform = register_overviews(secA.img.overview, secA.overview_tform, secB.img.overview);
         disp('Registered the two section overviews.')
     catch
-        disp('Failed to register the two section overviews. Sections will not be aligned.')
+        disp('Failed to register the two section overviews. Sections will not be aligned to each other.')
     end
 else
     disp('Sections overviews are already registered.')
@@ -23,12 +23,12 @@ end
 disp('==== Estimating rough tile alignments.')
 
 if any(cellfun('isempty', secA.rough_alignments)) || params.overwrite_rough_alignments
-    [secA.rough_alignments, secA.grid_aligned] = rough_align_tiles(secA);
+    [secA.rough_alignments, secA.grid_aligned] = rough_align_tiles(secA, 'overview_scale', params.rough_align_overview_scale, 'tile_scale', params.rough_align_tile_scale);
 else
     fprintf('Section %d is already roughly aligned.\n', secA.num)
 end
 if any(cellfun('isempty', secB.rough_alignments)) || params.overwrite_rough_alignments
-    [secB.rough_alignments, secB.grid_aligned] = rough_align_tiles(secB);
+    [secB.rough_alignments, secB.grid_aligned] = rough_align_tiles(secB, 'overview_scale', params.rough_align_overview_scale, 'tile_scale', params.rough_align_tile_scale);
 else
     fprintf('Section %d is already roughly aligned.\n', secB.num)
 end
@@ -77,6 +77,10 @@ p.KeepUnmatched = true;
 % Required parameters
 p.addRequired('fixed_sec');
 p.addRequired('moving_sec');
+
+% Rough alignment
+p.addParameter('rough_align_overview_scale', 0.78); % default = 0.5
+p.addParameter('rough_align_tile_scale', 0.78 * 0.07); % default = 0.05
 
 % Overwrites
 p.addParameter('overwrite_overview_registration', false);

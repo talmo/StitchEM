@@ -63,7 +63,9 @@ x_hat = (params.lambda .^ 2 * (A' * A) + gamma' * gamma) \ (params.lambda .^ 2 *
 x_hat = x_hat(:, 1:2); % drop the last column (~[0 0 1]')
 
 % Sanity checking
-assert(~any(any(isnan(x_hat))))
+if any(any(isnan(x_hat)))
+    error('Failed to calculate transforms with lambda = %s', num2str(params.lambda))
+end
 
 % Splice out solution into tforms
 tforms = cell(num_secs, max([max(matchesA.tile); max(matchesB.tile)]));

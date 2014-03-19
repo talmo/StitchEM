@@ -19,15 +19,15 @@ end
 regions = num2cell([X(:) Y(:)], 2);
 num_regions = length(regions);
 
-region_data = table(regions, zeros(num_regions, 1), zeros(num_regions, 1), zeros(num_regions, 1), zeros(num_regions, 1), ...
-    'VariableNames', {'region', 'num_featsA', 'num_featsB', 'num_matches', 'distances'});
+%region_data = table(regions, zeros(num_regions, 1), zeros(num_regions, 1), zeros(num_regions, 1), zeros(num_regions, 1), ...
+%    'VariableNames', {'region', 'num_featsA', 'num_featsB', 'num_matches', 'distances'});
 total_matching_time = tic;
 
 % Loop through list of regions
 matchesA = cell(num_regions, 1);
 matchesB = cell(num_regions, 1);
 
-for i = 1:num_regions
+parfor i = 1:num_regions
     tic;
     % Get features in region
     region_featuresA = filter_features(featuresA, 'global_points', [regions{i}, params.region_size, params.region_size]);
@@ -56,17 +56,17 @@ for i = 1:num_regions
     matchesB{i} = region_featuresB(match_indices(:, 2), {'id', 'global_points', 'section', 'tile'});
     
     % Statistics
-    ptsA = matchesA{i}.global_points;
-    ptsB = matchesB{i}.global_points;
-    num_matches = size(ptsA, 1);
-    avg_distances = sum(calculate_match_distances(ptsA, ptsB)) / num_matches;
+    %ptsA = matchesA{i}.global_points;
+    %ptsB = matchesB{i}.global_points;
+    %num_matches = size(ptsA, 1);
+    %avg_distances = sum(calculate_match_distances(ptsA, ptsB)) / num_matches;
     % 'num_featsA', 'num_featsB', 'num_matches', 'distances'
-    region_data_row = {size(region_featuresA, 1), size(region_featuresB, 1), num_matches, avg_distances};
-    region_data(i, 2:end) = region_data_row;
+    %region_data_row = {size(region_featuresA, 1), size(region_featuresB, 1), num_matches, avg_distances};
+    %region_data(i, 2:end) = region_data_row;
     
-    if params.verbosity > 1
-        fprintf('feats: %d & %d -> %d matches | avg_dist = %.2f px | ', region_data_row{:})
-    end
+    %if params.verbosity > 1
+    %    fprintf('feats: %d & %d -> %d matches | avg_dist = %.2f px | ', region_data_row{:})
+    %end
     
     if params.verbosity > 0
         fprintf('Matched region %d/%d. [%.2fs]\n', i, num_regions, toc)
@@ -91,6 +91,8 @@ end
 tic
 grid_inliers = zeros(num_matches, 1);
 grid_outliers = zeros(num_matches, 1);
+
+params.grid_aligned = {(1:16), (1:16)};
 
 % Do the clustering for any grid-aligned tiles separately (they're
 % probably mistranslated significantly)
@@ -179,17 +181,24 @@ unfiltered_matches = ~(grid_inliers | grid_outliers);
 unfilteredA = matchesA(unfiltered_matches, :);
 unfilteredB = matchesB(unfiltered_matches, :);
 
-% Filter
-[inliers_idx, outliers_idx] = filter_inliers(unfilteredA, unfilteredB, false, params);
+% Check if everything was already filtered
+if ~isempty(unfilteredA)
+    % Filter
+    [inliers_idx, outliers_idx] = filter_inliers(unfilteredA, unfilteredB, false, params);
 
-% Make logical indexing arrays
-unfiltered_matches_idx = find(unfiltered_matches);
-filtered_inliers = unfiltered_matches; filtered_inliers(unfiltered_matches_idx(outliers_idx)) = 0;
-filtered_outliers = unfiltered_matches; filtered_outliers(unfiltered_matches_idx(inliers_idx)) = 0;
+    % Make logical indexing arrays
+    unfiltered_matches_idx = find(unfiltered_matches);
+    filtered_inliers = unfiltered_matches; filtered_inliers(unfiltered_matches_idx(outliers_idx)) = 0;
+    filtered_outliers = unfiltered_matches; filtered_outliers(unfiltered_matches_idx(inliers_idx)) = 0;
 
-% Aggregate with grid matches
-inliers = grid_inliers | filtered_inliers;
-outliers = grid_outliers | filtered_outliers;
+    % Aggregate with grid matches
+    inliers = grid_inliers | filtered_inliers;
+    outliers = grid_outliers | filtered_outliers;
+else
+    % Grid matches were the only matches
+    inliers = grid_inliers;
+    outliers = grid_outliers;
+end
 
 % Separate matches
 outliersA = matchesA(outliers, :);
@@ -201,7 +210,6 @@ fprintf('Filtered registered matches. Total inliers: %d/%d. [%.2fs]\n', size(mat
 % Sanity checking
 assert(~any(inliers == outliers))
 assert(sum(inliers) + sum(outliers) == num_matches)
-
 %% Visualization
 if params.show_region_stats
     % Number of matches heatmap
@@ -276,15 +284,28 @@ warning('on', 'stats:gmdistribution:IllCondCov');
 
 % Cluster based on calculated models
 clusters_idx = cluster(fit, distances);
+clusters = unique(clusters_idx);
 
-% Find cluster with lowest mean
-cluster_means = zeros(N, 1);
-for n = 1:N
-    cluster_means(n) = mean(distances(clusters_idx == n));
+% Criteria for choosing the inlier cluster
+switch params.gm_clustering_method
+    case 'std'
+        % Cluster with the smallest standard deviation
+        stds = arrayfun(@(c) std(distances(clusters_idx == c)), clusters);
+        [~, c] = min(stds);
+    
+    case 'mean'
+        % Cluster with the smallest mean
+        means = arrayfun(@(c) mean(distances(clusters_idx == c)), clusters);
+        [~, c] = min(means);
+        
+    case 'largest'
+        % Largest cluster
+        sizes = arrayfun(@(c) length(distances(clusters_idx == c)), clusters);
+        [~, c] = max(sizes);
 end
-[~, c] = min(cluster_means);
 
-% Inliers are the matches in the cluster with the lowest mean
+
+% Split up by clusters
 inliers = find(clusters_idx == c);
 outliers = find(clusters_idx ~= c);
 end
@@ -342,6 +363,7 @@ p.addParameter('filter_method', 'gm'); % 'gm' or 'kmeans'
 p.addParameter('filter_method_gridded', 'kmeans'); % 'gm' or 'kmeans'
 p.addParameter('grid_aligned', {});
 p.addParameter('gm_replicates', 5); % default = 5
+p.addParameter('gm_clustering_method', 'largest'); % 'std' or 'mean' or 'largest'
 p.addParameter('kmeans_replicates', 5); % default = 5
 p.addParameter('kmeans_clustering_method', 'largest'); % 'std' or 'mean' or 'largest'
 

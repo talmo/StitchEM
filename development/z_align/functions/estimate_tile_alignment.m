@@ -8,13 +8,13 @@ function [tile_tform, tforms, varargout] = estimate_tile_alignment(tile_img, ove
 %   tile_tform = estimate_tile_alignment(tile_img, overview_img, tform_overview);
 %
 % Optional name-value pairs and their defaults:
-%   scale_ratio = 0.5
-%   crop_ratio = 0.5
-%   tile_scale_ratio = 0.05
+%   overview_scale = 0.5
+%   overview_crop_ratio = 0.5
+%   tile_scale = 0.05
 %   show_registration = false
 
 % Parse inputs
-[tile_img, overview_img, tform_overview, params] = parse_inputs(tile_img, overview_img, varargin{:});
+[tile_img, overview_img, tform_overview, params, unmatched_params] = parse_inputs(tile_img, overview_img, varargin{:});
 
 % Pre-process the images
 [tile, overview] = pre_process(tile_img, overview_img, params);
@@ -22,7 +22,7 @@ function [tile_tform, tforms, varargout] = estimate_tile_alignment(tile_img, ove
 % (Try to) register the tile to the overview image
 try
     % Try registering with any custom registration parameters
-    tform_registration = surf_register(overview, tile, params.surf_register_params{:});
+    tform_registration = surf_register(overview, tile, unmatched_params);
 catch err
     if ~isempty(params.surf_register_params)
         % We failed to register with custom params, try with default
@@ -39,7 +39,7 @@ catch err
     end
 end
 
-% Check for signs of bad registration in the 
+% Check for signs of bad registration in the transform
 [reg_scale, ~, reg_translation] = estimate_tform_params(tform_registration);
 if reg_scale > 2.0
     warning('Tile registration to its overview appears to be very oddly scaled. Check the registration results.')
@@ -49,8 +49,8 @@ if any(reg_translation > size(overview))
 end
 
 % Calculate the scaling transforms
-tform_prescale = scale_tform(params.tile_registration_scale);
-tform_rescale = scale_tform(1 / (reg_scale * params.tile_registration_scale));
+tform_prescale = scale_tform(params.tile_scale);
+tform_rescale = scale_tform(1 / (reg_scale * params.tile_scale));
 
 % Compose the final tform:
 % Prescale -> Register to overview -> Register overview to other overview -> Rescale
@@ -87,9 +87,10 @@ end
 
 end
 
-function [tile_img, overview_img, tform_overview, params] = parse_inputs(tile_img, overview_img, varargin)
+function [tile_img, overview_img, tform_overview, params, unmatched] = parse_inputs(tile_img, overview_img, varargin)
 % Create inputParser instance
 p = inputParser;
+p.KeepUnmatched = true;
 
 % Required parameters
 p.addRequired('tile_img');
@@ -99,12 +100,12 @@ p.addRequired('overview_img');
 p.addOptional('tform_overview', affine2d());
 
 % Overview pre-processing
-p.addParameter('scale_ratio', 0.5);
-p.addParameter('crop_ratio', 0.5);
+p.addParameter('overview_scale', 0.5);
+p.addParameter('overview_crop_ratio', 0.5);
 
 % Scaling
 p.addParameter('tile_pre_scale', 1.0);
-p.addParameter('tile_registration_scale', 0.05);
+p.addParameter('tile_scale', 0.05);
 
 % Visualization
 p.addParameter('show_registration', false);
@@ -112,24 +113,22 @@ p.addParameter('show_registration', false);
 % Debugging
 p.addParameter('verbosity', 0);
 
-% Parameters for surf_register (see function for name-value pairs)
-p.addParameter('surf_register_params', {});
-
 % Validate and parse input
 p.parse(tile_img, overview_img, varargin{:});
 tile_img = p.Results.tile_img;
 overview_img = p.Results.overview_img;
 tform_overview = p.Results.tform_overview;
 params = rmfield(p.Results, {'tile_img', 'overview_img', 'tform_overview'});
+unmatched = p.Unmatched;
 end
 
 function [tile, overview] = pre_process(tile_img, overview_img, params)
 % Resize
-tile = imresize(tile_img, 1 / params.tile_pre_scale * params.tile_registration_scale);
-overview = imresize(overview_img, params.scale_ratio);
+tile = imresize(tile_img, 1 / params.tile_pre_scale * params.tile_scale);
+overview = imresize(overview_img, params.overview_scale);
 
 % Crop to center
-overview = imcrop(overview, [size(overview, 2) * (params.crop_ratio / 2), size(overview, 1) * (params.crop_ratio / 2), size(overview, 2) * params.crop_ratio, size(overview, 1) * params.crop_ratio]);
+overview = imcrop(overview, [size(overview, 2) * (params.overview_crop_ratio / 2), size(overview, 1) * (params.overview_crop_ratio / 2), size(overview, 2) * params.overview_crop_ratio, size(overview, 1) * params.overview_crop_ratio]);
 
 end
 

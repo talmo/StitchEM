@@ -83,7 +83,7 @@ function [points, descriptors] = get_feats(img, params)
 % Find interest points
 interest_points = detectSURFFeatures(img, ...
     'MetricThreshold', params.SURF_MetricThreshold, ...
-    'NumOctave', params.SURF_NumOctave, ...
+    'NumOctaves', params.SURF_NumOctaves, ...
     'NumScaleLevels', params.SURF_NumScaleLevels);
 
 % Get descriptors from pixels around interest points
@@ -127,7 +127,7 @@ p2 = inputParser;
 
 % Detection
 p2.addParameter('SURF_MetricThreshold', 1000); % MATLAB default = 1000
-p2.addParameter('SURF_NumOctave', 3); % MATLAB default = 3
+p2.addParameter('SURF_NumOctaves', 3); % MATLAB default = 3
 p2.addParameter('SURF_NumScaleLevels', 4); % MATLAB default = 4
 p2.addParameter('SURFSize', 64); % MATLAB default = 64
 
