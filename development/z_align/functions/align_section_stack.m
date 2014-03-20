@@ -1,5 +1,5 @@
 function [secs, mean_error, varargout] = align_section_stack(secs, matchesA, matchesB, varargin)
-%ALIGN_SECTION_STACK Calculates transforms to align a pair of sections.
+%ALIGN_SECTION_STACK Calculates transforms to align a stack of sections.
 
 % Process input
 [params, unmatched_params] = parse_inputs(varargin{:});

@@ -19,7 +19,7 @@ tiles = cell(num_tiles, 1);
 % We switch on this to minimize operations on nodes if we don't need to
 % resize the images
 if tile_scale == 1.0
-    for tile_num = 1:num_tiles
+    parfor tile_num = 1:num_tiles
         tiles{tile_num} = imload_tile(sec_num, tile_num);
     end
     varargout = {tiles};
