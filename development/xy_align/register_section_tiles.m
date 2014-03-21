@@ -8,11 +8,7 @@ sec = sec_struct(sec_num, 0.125);
 [sec.rough_alignments, sec.grid_aligned] = rough_align_tiles(sec);
 
 %% Detect features
-%sec.features = detect_section_features(sec);
-% TODO:
-% - refactor detect_section_features to accept a section structure
-% - add functionality to detect_section_features to calculate overlap
-% - add functionality to detect_tile_features to accept a region parameter
+sec.features = detect_section_features(sec);
 
 %% Match
 %[matchesA, matchesB] = match_section_features(sec);

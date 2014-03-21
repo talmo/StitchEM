@@ -1,60 +1,43 @@
-function [matchesA, matchesB, regions, outliersA, outliersB] = match_feature_sets(featuresA, featuresB, varargin)
+function [matchesA, matchesB, outliersA, outliersB] = match_feature_sets(featuresA, featuresB, varargin)
 %MATCH_FEATURE_SETS Returns matching points across two sections.
 
 % Parse inputs
 params = parse_inputs(varargin{:});
 
-% Find bounds of area spanned by features
-xy_top_left = max([min(featuresA.global_points); min(featuresB.global_points)]);
-xy_bottom_right = min([max(featuresA.global_points); max(featuresB.global_points)]);
-
-% Check for bad registration
-width_height_ratio = max(xy_bottom_right - xy_top_left) / min(xy_bottom_right - xy_top_left);
-if width_height_ratio < 0.8 || width_height_ratio > 1.2
-    warning('Grid appears to be very rectangular. This is usually a sign of bad initialization.')
-end
-
-% Break area into smaller regions
-[X, Y] = meshgrid(xy_top_left(1):params.region_size:xy_bottom_right(1), xy_top_left(2):params.region_size:xy_bottom_right(2));
-regions = num2cell([X(:) Y(:)], 2);
-num_regions = length(regions);
-
-%region_data = table(regions, zeros(num_regions, 1), zeros(num_regions, 1), zeros(num_regions, 1), zeros(num_regions, 1), ...
-%    'VariableNames', {'region', 'num_featsA', 'num_featsB', 'num_matches', 'distances'});
 total_matching_time = tic;
 
 % Loop through list of regions
-matchesA = cell(num_regions, 1);
-matchesB = cell(num_regions, 1);
+% matchesA = cell(num_regions, 1);
+% matchesB = cell(num_regions, 1);
 
-parfor i = 1:num_regions
-    tic;
-    % Get features in region
-    region_featuresA = filter_features(featuresA, 'global_points', [regions{i}, params.region_size, params.region_size]);
-    region_featuresB = filter_features(featuresB, 'global_points', [regions{i}, params.region_size, params.region_size]);
+% parfor i = 1:num_regions
+%     tic;
+%     % Get features in region
+%     region_featuresA = filter_features(featuresA, 'global_points', [regions{i}, params.region_size, params.region_size]);
+%     region_featuresB = filter_features(featuresB, 'global_points', [regions{i}, params.region_size, params.region_size]);
+%     
+%     % Check if we have enough features
+%     if size(region_featuresA, 1) < 5 || size(region_featuresB, 1) < 5
+%         %fprintf('Skipped region %d/%d since there were not enough features to match. [%.2fs]\n', i, num_regions, toc)
+%         continue
+%     end
     
-    % Check if we have enough features
-    if size(region_featuresA, 1) < 5 || size(region_featuresB, 1) < 5
-        %fprintf('Skipped region %d/%d since there were not enough features to match. [%.2fs]\n', i, num_regions, toc)
-        continue
-    end
+% Match using NNR
+match_indices = matchFeatures(featuresA.descriptors, featuresB.descriptors, ...
+    'MatchThreshold', params.MatchThreshold, ...
+    'Method', params.Method, ...
+    'Metric', params.Metric, ...
+    'MaxRatio', params.MaxRatio);
+
+% Get the rows corresponding to the matched features
+matchesA = featuresA(match_indices(:, 1), {'id', 'global_points', 'section', 'tile'});
+matchesB = featuresB(match_indices(:, 2), {'id', 'global_points', 'section', 'tile'});
     
-    % Match using NNR
-    match_indices = matchFeatures(region_featuresA.descriptors, region_featuresB.descriptors, ...
-        'MatchThreshold', params.MatchThreshold, ...
-        'Method', params.Method, ...
-        'Metric', params.Metric, ...
-        'MaxRatio', params.MaxRatio);
-    
-    if size(match_indices, 1) == 0
-        %fprintf('No matches found in region %d/%d. [%.2fs]\n', i, num_regions, toc)
-        continue
-    end
-    
-    % Get the rows corresponding to the matched features
-    matchesA{i} = region_featuresA(match_indices(:, 1), {'id', 'global_points', 'section', 'tile'});
-    matchesB{i} = region_featuresB(match_indices(:, 2), {'id', 'global_points', 'section', 'tile'});
-    
+
+if size(match_indices, 1) == 0
+    fprintf('No matches found. [%.2fs]\n', toc)
+    return
+end
     % Statistics
     %ptsA = matchesA{i}.global_points;
     %ptsB = matchesB{i}.global_points;
@@ -68,17 +51,19 @@ parfor i = 1:num_regions
     %    fprintf('feats: %d & %d -> %d matches | avg_dist = %.2f px | ', region_data_row{:})
     %end
     
-    if params.verbosity > 0
-        fprintf('Matched region %d/%d. [%.2fs]\n', i, num_regions, toc)
-    end
-end
+%     if params.verbosity > 0
+%         fprintf('Matched region %d/%d. [%.2fs]\n', i, num_regions, toc)
+%     end
+% end
 
 % Merge cell arrays into a single table per feature set
-matchesA = vertcat(matchesA{:});
-matchesB = vertcat(matchesB{:});
+% matchesA = vertcat(matchesA{:});
+% matchesB = vertcat(matchesB{:});
 
 num_matches = size(matchesA, 1);
-fprintf('Done NNR matching. Found %d matching features in %d regions. [%.2fs]\n', num_matches, num_regions, toc(total_matching_time))
+if params.verbosity > 0
+    fprintf('Found %d matching features. [%.2fs]\n', num_matches, toc(total_matching_time))
+end
 
 
 %% Inlier filtering
@@ -210,18 +195,6 @@ fprintf('Filtered registered matches. Total inliers: %d/%d. [%.2fs]\n', size(mat
 % Sanity checking
 assert(~any(inliers == outliers))
 assert(sum(inliers) + sum(outliers) == num_matches)
-%% Visualization
-if params.show_region_stats
-    % Number of matches heatmap
-    figure,imagesc([xy_top_left(1), xy_bottom_right(1)], [xy_top_left(2), xy_bottom_right(2)], reshape(region_data.num_matches, size(X))), colorbar
-    title('Number of matches')
-    integer_axes()
-
-    % Match distance heatmap
-    figure,imagesc([xy_top_left(1), xy_bottom_right(1)], [xy_top_left(2), xy_bottom_right(2)], reshape(region_data.distances, size(X))), colorbar
-    title('Average match distances (px)')
-    integer_axes()
-end
 
 end
 

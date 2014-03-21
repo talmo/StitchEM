@@ -29,7 +29,7 @@ if verbosity > 1
 end
 
 % Loop through tiles
-parfor tile_num = 1:16
+for tile_num = 1:length(tiles)
     tic;
     % Find regions overlapping with neighbors
     neighbors = arrayfun(@(i) sqrt((r(i) - r(tile_num)) .^ 2 +  (c(i) - c(tile_num)) .^ 2), 1:16) <= 1;
