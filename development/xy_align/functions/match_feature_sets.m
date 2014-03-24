@@ -6,22 +6,6 @@ params = parse_inputs(varargin{:});
 
 total_matching_time = tic;
 
-% Loop through list of regions
-% matchesA = cell(num_regions, 1);
-% matchesB = cell(num_regions, 1);
-
-% parfor i = 1:num_regions
-%     tic;
-%     % Get features in region
-%     region_featuresA = filter_features(featuresA, 'global_points', [regions{i}, params.region_size, params.region_size]);
-%     region_featuresB = filter_features(featuresB, 'global_points', [regions{i}, params.region_size, params.region_size]);
-%     
-%     % Check if we have enough features
-%     if size(region_featuresA, 1) < 5 || size(region_featuresB, 1) < 5
-%         %fprintf('Skipped region %d/%d since there were not enough features to match. [%.2fs]\n', i, num_regions, toc)
-%         continue
-%     end
-    
 % Match using NNR
 match_indices = matchFeatures(featuresA.descriptors, featuresB.descriptors, ...
     'MatchThreshold', params.MatchThreshold, ...
@@ -38,27 +22,6 @@ if size(match_indices, 1) == 0
     fprintf('No matches found. [%.2fs]\n', toc)
     return
 end
-    % Statistics
-    %ptsA = matchesA{i}.global_points;
-    %ptsB = matchesB{i}.global_points;
-    %num_matches = size(ptsA, 1);
-    %avg_distances = sum(calculate_match_distances(ptsA, ptsB)) / num_matches;
-    % 'num_featsA', 'num_featsB', 'num_matches', 'distances'
-    %region_data_row = {size(region_featuresA, 1), size(region_featuresB, 1), num_matches, avg_distances};
-    %region_data(i, 2:end) = region_data_row;
-    
-    %if params.verbosity > 1
-    %    fprintf('feats: %d & %d -> %d matches | avg_dist = %.2f px | ', region_data_row{:})
-    %end
-    
-%     if params.verbosity > 0
-%         fprintf('Matched region %d/%d. [%.2fs]\n', i, num_regions, toc)
-%     end
-% end
-
-% Merge cell arrays into a single table per feature set
-% matchesA = vertcat(matchesA{:});
-% matchesB = vertcat(matchesB{:});
 
 num_matches = size(matchesA, 1);
 if params.verbosity > 0
@@ -319,9 +282,6 @@ end
 function params = parse_inputs(varargin)
 % Create inputParser instance
 p = inputParser;
-
-% Regions
-p.addParameter('region_size', 1500);
 
 % Nearest Neighbor Ratio (matchFeatures)
 p.addParameter('Prenormalized', true); % MATLAB default = false (SURF descriptors are already normalized)

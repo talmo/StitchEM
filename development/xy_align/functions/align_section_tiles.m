@@ -9,7 +9,7 @@ function [sec, mean_error] = align_section_tiles(sec, matchesA, matchesB, vararg
 
 % Apply the calculated transforms to the rough tforms
 for t = 1:size(tforms, 2)
-    if ~isempty(tforms{s, t})
+    if ~isempty(tforms{1, t})
         sec.fine_alignments{t} = affine2d(sec.rough_alignments{t}.T * tforms{1, t}.T);
     else
         sec.fine_alignments{t} = sec.rough_alignments{t};

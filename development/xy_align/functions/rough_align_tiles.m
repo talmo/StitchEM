@@ -14,7 +14,7 @@ verbosity = params.verbosity;
 
 % Estimate alignments
 rough_alignments = cell(sec.num_tiles, 1);
-parfor tile_num = 1:sec.num_tiles
+for tile_num = 1:sec.num_tiles
     registration_time = tic;
     try
         rough_alignments{tile_num} = estimate_tile_alignment(tiles{tile_num}, overview, overview_tform, 'tile_pre_scale', tile_scale, unmatched_params);

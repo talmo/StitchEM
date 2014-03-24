@@ -26,7 +26,7 @@ end
 % Calculate output spatial references
 tile_Rs = cell(num_tiles, 1);
 for tile_num = 1:num_tiles
-    tile_size = size(tile_imgs{tile_num}) * (1 / params.pre_scale) * params.display_scale;
+    tile_size = round(size(tile_imgs{tile_num}) * (1 / params.pre_scale) * params.display_scale);
     tile_Rs{tile_num} = tform_spatial_ref(imref2d(tile_size), tforms{tile_num});
 end
 merge_R = merge_spatial_refs(tile_Rs);

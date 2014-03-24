@@ -25,8 +25,9 @@ tiles = cellfun(@(t) t.transformPointsForward(tile), tforms, 'UniformOutput', fa
 if params.visualize
     figure
     colors = get(0,'DefaultAxesColorOrder');
+    set(gca,'YDir','reverse');
+    integer_axes();
     for i = 1:length(tiles)
-        set(gca,'YDir','reverse');
         X = [tiles{i}(:, 1); tiles{i}(1, 1)];
         Y = [tiles{i}(:, 2); tiles{i}(1, 2)];
         plot(X, Y, '-x', 'Color', colors(rem(i - 1, size(colors, 1)) + 1, :));

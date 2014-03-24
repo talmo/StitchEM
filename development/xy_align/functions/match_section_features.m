@@ -26,7 +26,7 @@ for i = 1:sec.num_tiles - 1
 
         % Match
         [mA, mB] = match_feature_sets(featuresA, featuresB, ...
-            'filter_inliers', true, 'MatchThreshold', 1.0, 'MaxRatio', 0.9, unmatched_params);
+            'filter_inliers', false, 'MatchThreshold', 1.0, 'MaxRatio', 0.9, unmatched_params);
 
         % Save results
         matchesA = [matchesA; mA]; matchesB = [matchesB; mB];
@@ -35,7 +35,13 @@ for i = 1:sec.num_tiles - 1
     end
 end
 
-
+if params.show_matches
+    imshow_section(sec, 'display_scale', params.display_scale);
+    hold on
+    plot_matches(matchesA, matchesB, params.display_scale);
+    integer_axes
+    hold off
+end
 end
 
 function region_features = filter_features(features, tile, region)
@@ -52,8 +58,6 @@ p.KeepUnmatched = true;
 
 % Visualization
 p.addParameter('show_matches', false);
-p.addParameter('show_outliers', false);
-p.addParameter('show_regions', false);
 p.addParameter('display_scale', 0.075);
 
 % Validate and parse input

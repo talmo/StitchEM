@@ -44,27 +44,27 @@ for i = 1:length(params.regions)
     wh = (max(R) - min(R)) * params.detection_scale;
     
     % Calculate indices for bounding box
-    r = max(round(xy(2)), 1) : min(round(xy(2) + wh(2)), size(tile_img, 1));
-    c = max(round(xy(1)), 1) : min(round(xy(1) + wh(1)), size(tile_img, 2));
+    row = max(round(xy(2)), 1) : min(round(xy(2) + wh(2)), size(tile_img, 1));
+    col = max(round(xy(1)), 1) : min(round(xy(1) + wh(1)), size(tile_img, 2));
     
     % Extract image data from region
-    img = tile_img(r, c);
+    img = tile_img(row, col);
     
     % Find interest points
     interest_points = detectSURFFeatures(img, ...
         'MetricThreshold', params.MetricThreshold, ...
-        'NumOctave', params.NumOctave, ...
+        'NumOctaves', params.NumOctaves, ...
         'NumScaleLevels', params.NumScaleLevels);
 
     % Get descriptors from pixels around interest points
-    [descriptors, valid_points] = extractFeatures(tile_img, ...
+    [descriptors, valid_points] = extractFeatures(img, ...
         interest_points, 'SURFSize', params.SURFSize);
 
     % Save valid points, i.e., points with descriptors
     local_points = valid_points(:).Location;
     
     % Adjust point locations from region to tile
-    local_points = local_points + repmat([c(1) - 1, r(1) - 1], size(local_points, 1), 1);
+    local_points = local_points + repmat([col(1) - 1, row(1) - 1], size(local_points, 1), 1);
     
     % Rescale to full resolution
     local_points = local_points * 1 / params.detection_scale;
@@ -104,7 +104,7 @@ p.addParameter('detection_scale', 0.25); % Scale to detect in
 
 % Detection
 p.addParameter('MetricThreshold', 5000); % MATLAB default = 1000
-p.addParameter('NumOctave',  3); % MATLAB default = 3
+p.addParameter('NumOctaves',  3); % MATLAB default = 3
 p.addParameter('NumScaleLevels', 4); % MATLAB default = 4
 p.addParameter('SURFSize', 64); % MATLAB default = 64
 

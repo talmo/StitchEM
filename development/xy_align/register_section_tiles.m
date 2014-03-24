@@ -2,21 +2,17 @@ sec_num = 100;
 
 %% Initialize
 % Load section images
-sec = sec_struct(sec_num, 0.125);
+sec = sec_struct(sec_num, 0.78 * 0.07);
 
 % Register tiles to section overview
 [sec.rough_alignments, sec.grid_aligned] = rough_align_tiles(sec);
 
 %% Detect features
-sec.features = detect_section_features(sec);
+sec.features = detect_section_features(sec, 'MetricThreshold', 11000);
 
 %% Match
-%[matchesA, matchesB] = match_section_features(sec);
-% TODO:
-% - create match_section_features function to serve as a wrapper for
-% match_feature_sets, similar to match_section_pair
-% - add functionality to match_feature_sets for finding bounding regions
-% based on pairwise tile overlaps
+[matchesA, matchesB] = match_section_features(sec, 'show_matches', true, ...
+    'MatchThreshold', 0.2, 'MaxRatio', 0.6);
 
 %% Rigidity curve
 lambda_curve(matchesA, matchesB);
