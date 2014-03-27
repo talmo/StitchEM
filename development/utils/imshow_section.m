@@ -121,19 +121,19 @@ params = rmfield(p.Results, {'sec', 'tile_imgs', 'tforms'});
 if isstruct(sec)
     sec_num = sec.num;
     fprintf('Merging pre-loaded section %d.\n', sec_num)
-    if isempty(tforms) || strcmp(tforms, 'rough')
-        tforms = sec.rough_alignments;
+    if isempty(tforms) || (ischar(tforms) && strcmp(tforms, 'rough'))
+        tforms = sec.rough_tforms;
         disp('Using rough alignments to display tiles.')
-    elseif strcmp(tforms, 'fine')
-        tforms = sec.fine_alignments;
+    elseif ischar(tforms) && strcmp(tforms, 'fine')
+        tforms = sec.fine_tforms;
         disp('Using fine alignments to display tiles.')
     end
-    if abs(params.display_scale - sec.tile_scale) < abs(params.display_scale - 1.0)
-        tile_imgs = sec.img.scaled_tiles;
-        params.pre_scale = sec.tile_scale;
-        fprintf('Using pre-scaled tiles at %sx scale.\n', num2str(sec.tile_scale))
+    if abs(params.display_scale - sec.tile_rough_scale) < abs(params.display_scale - 1.0)
+        tile_imgs = sec.img.rough_tiles;
+        params.pre_scale = sec.tile_rough_scale;
+        fprintf('Using pre-scaled tiles at %sx scale.\n', num2str(sec.tile_rough_scale))
     else
-        tile_imgs = sec.img.tiles;
+        tile_imgs = sec.img.xy_tiles;
         disp('Using full resolution tiles.')
     end
 else

@@ -15,9 +15,11 @@ if ~isdir('functions')
     clear response
 end
 
+%% Add paths
 % Add all the functions and classes for StitchEM to the path so they are
 % callable from anywhere
 addpath(genpath(fullfile(script_path, 'classes')));
 addpath(genpath(fullfile(script_path, 'functions')));
 addpath(genpath(fullfile(script_path, 'development', 'utils')));
+addpath(genpath(fullfile(script_path, 'development', 'xyz_align')));
 clear script_path

@@ -16,7 +16,7 @@ switch ext
     case ''
         % Analyze section path
         section_path_pattern = '.*_Sec(?<sec>[0-9]*)_Montage';
-        section_path_tokens = regexp(section_path, section_path_pattern, 'names');
+        section_path_tokens = regexp(filename, section_path_pattern, 'names');
         info.sec_num = str2double(section_path_tokens.sec);
         info.is_section_folder = 1;
         

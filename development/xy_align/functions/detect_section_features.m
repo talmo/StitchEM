@@ -28,6 +28,9 @@ if verbosity > 1
     fprintf('Initialized variables for parallelization. [%.2fs]\n', toc(total_time))
 end
 
+% Turn off warning about badly scaled or nearly singular matrix
+warning('off', 'MATLAB:nearlySingularMatrix')
+
 % Loop through tiles
 for tile_num = 1:length(tiles)
     tic;
@@ -50,6 +53,9 @@ for tile_num = 1:length(tiles)
         fprintf('Detected %d features in %d regions in tile %d [%.2fs]\n', length(tile_features.local_points), length(overlap_regions), tile_num, toc)
     end
 end
+
+% Turn warning about badly scaled or nearly singular matrix back on
+warning('on', 'MATLAB:nearlySingularMatrix')
 
 post_process_time = tic;
 

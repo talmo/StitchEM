@@ -2,8 +2,8 @@ function section_path = get_section_path(sec_num)
 %GET_SECTION_PATH Returns the path to a section.
 
 % Paths
-%data_path = '/data/home/talmo/EMdata/W002';
-data_path = 'C:\Users\Talmo\Desktop';
+data_path = '/data/home/talmo/EMdata/W002';
+%data_path = 'C:\Users\Talmo\Desktop';
 section_foldername_pattern = 'S2-W002_Sec%d_Montage';
 
 % Find path to section
