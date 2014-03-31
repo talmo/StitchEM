@@ -36,74 +36,60 @@ end
 stack_R = merge_spatial_refs(tile_Rs(:));
 
 % Render sections
+pctRunOnAll warning('off', 'MATLAB:nearlySingularMatrix')
+warning('off', 'MATLAB:nearlySingularMatrix')
 for s = 1:num_secs
     sec_render_time = tic;
-    
-    % Load images
-    switch params.tile_images
-        case 'load'
-            tile_imgs = imload_section_tiles(secs{s}.num, params.render_scale);
-            pre_scale = params.render_scale;
-        case 'xy'
-            tile_imgs = secs{s}.img.xy_tiles;
-            pre_scale = secs{s}.tile_xy_scale;
-        case 'z'
-            tile_imgs = secs{s}.img.z_tiles;
-            pre_scale = secs{s}.tile_z_scale;
-        case 'rough'
-            tile_imgs = secs{s}.img.rough_tiles;
-            pre_scale = secs{s}.tile_rough_scale;
+    if params.verbosity > 1
+        fprintf('== Rendering section %d (%d/%d) | ', secs{s}.num, s, num_secs)
+        freemem
     end
-    
-    % Render
-    sec_img = render_section(tile_imgs, render_tforms(s, :), stack_R, pre_scale, params.render_scale);
+
+    % Load tiles
+    tiles = imload_section_tiles(secs{s}.num, params.render_scale);
+
+    % Blend tiles into section image
+    sec_img = zeros(stack_R.ImageSize, 'uint8');
+    for t = 1:secs{s}.num_tiles
+        tile_render_time = tic;
+        
+        % Get section subscripts
+        [secILimits, secJLimits] = stack_R.worldToSubscript(tile_Rs{s, t}.XWorldLimits, tile_Rs{s, t}.YWorldLimits);
+        
+        % Adjust tile to stack spatial reference
+        tile_R = imref2d([diff(secILimits) + 1, diff(secJLimits) + 1], stack_R.PixelExtentInWorldX, stack_R.PixelExtentInWorldY);
+        
+        % Load and transform tile
+        tile = imwarp(tiles{t}, render_tforms{s, t}, 'OutputView', tile_R);
+        
+        % Merge tile into section image
+        sec_img(secILimits(1):secILimits(2), secJLimits(1):secJLimits(2)) = ...
+            max(sec_img(secILimits(1):secILimits(2), secJLimits(1):secJLimits(2)), tile);
+        
+        if params.verbosity > 1
+            fprintf('Transformed and merged tile %2d. [%.2fs] | ', t, toc(tile_render_time))
+            freemem
+        end
+    end
     
     % Save
     imwrite(sec_img, fullfile(params.path, sprintf('sec%d_%sx.tif', secs{s}.num, num2str(params.render_scale))));
+    sec_img = []; % free up memory for next section
     
-    if params.verbosity > 0
+    if params.verbosity > 1
+        fprintf('Rendered section %d (%d/%d). [%.2fs] | ', secs{s}.num, s, num_secs, toc(sec_render_time))
+        freemem
+    elseif params.verbosity > 0
         fprintf('Rendered section %d (%d/%d). [%.2fs]\n', secs{s}.num, s, num_secs, toc(sec_render_time))
     end
 end
 
+pctRunOnAll warning('on', 'MATLAB:nearlySingularMatrix')
+warning('on', 'MATLAB:nearlySingularMatrix')
+
 if params.verbosity > 0
     fprintf('Done rendering %d sections. [%.2fs]\n', length(secs), toc(total_render_time))
 end
-
-end
-
-function sec_img = render_section(tile_imgs, render_tforms, stack_R, pre_scale, render_scale)
-
-num_tiles = length(tile_imgs);
-
-% Turn off warnings about bad scaling
-pctRunOnAll warning('off', 'MATLAB:nearlySingularMatrix')
-
-% Scale, transform and pad images in parallel
-final_tiles = cell(num_tiles, 1);
-for tile_num = 1:num_tiles
-    tile = tile_imgs{tile_num};
-    
-    % Scale tile to render scale
-    if pre_scale ~= render_scale
-        tile = imresize(tile, (1 / pre_scale) * render_scale);
-    end
-    
-    % Transform
-    [tile, tile_R] = imwarp(tile, render_tforms{tile_num}, 'Interp', 'cubic');
-    
-    % Pad
-    tile = images.spatialref.internal.resampleImageToNewSpatialRef(tile, tile_R, stack_R, 'bicubic', 0);
-    
-    % Save
-    final_tiles{tile_num} = tile;
-end
-
-% Merge stack of tiles
-sec_img = max(cat(3, final_tiles{:}), [], 3);
-
-% Turn warnings about bad scaling back on
-pctRunOnAll warning('on', 'MATLAB:nearlySingularMatrix')
 
 end
 
@@ -112,15 +98,12 @@ function params = parse_inputs(varargin)
 p = inputParser;
 p.StructExpand = false;
 
-% Images
-p.addParameter('tile_images', 'load'); % or 'xy' or 'rough' or 'z'
-
 % Scaling
-p.addParameter('render_scale', 0.025);
+p.addParameter('render_scale', 1.0);
 p.addParameter('tile_size', [8000 8000]);
 
 % Saving
-p.addParameter('path', 'renders')
+p.addParameter('path', 'renders');
 
 % Verbosity
 p.addParameter('verbosity', 1);
@@ -128,5 +111,10 @@ p.addParameter('verbosity', 1);
 % Validate and parse input
 p.parse(varargin{:});
 params = p.Results;
+
+% Create save path folder if needed
+if ~exist(params.path, 'dir')
+        mkdir(params.path)
+end
 
 end

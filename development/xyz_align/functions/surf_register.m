@@ -139,7 +139,7 @@ p2.addParameter('NNR_MaxRatio', 0.6); % MATLAB default = 0.6
 
 % Transform estimation
 p2.addParameter('MSAC_transformType', 'similarity'); % MATLAB default = 'similarity'
-p2.addParameter('MSAC_MaxNumTrials', 500); % MATLAB default = 1000
+p2.addParameter('MSAC_MaxNumTrials', 1000); % MATLAB default = 1000
 p2.addParameter('MSAC_Confidence', 99); % MATLAB default = 99
 p2.addParameter('MSAC_MaxDistance', 1.5); % MATLAB default = 1.5
 

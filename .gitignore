@@ -3,3 +3,5 @@
 *.png
 *.mat
 *.tif
+*.gitignore~
+*.fig

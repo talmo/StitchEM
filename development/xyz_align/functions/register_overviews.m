@@ -5,7 +5,7 @@ registration_time = tic;
 
 %% Register overviews
 % Parse inputs
-params = parse_input(varargin{:});
+[params, unmatched_params] = parse_input(varargin{:});
 tform_fixed = fixed_sec.overview_tform;
 
 if params.verbosity > 0
@@ -17,7 +17,7 @@ end
 [moving_unfiltered, moving_filtered] = pre_process(moving_sec.img.overview, params);
 
 % Register overviews
-[tform_moving, ~, ~, mean_registration_error] = surf_register(fixed_filtered, moving_filtered, 'MSAC_MaxNumTrials', 1000);
+[tform_moving, ~, ~, mean_registration_error] = surf_register(fixed_filtered, moving_filtered, unmatched_params);
 
 % Adjust transform for initial transforms
 tform_moving = affine2d(tform_fixed.T * tform_moving.T);
@@ -68,10 +68,11 @@ end
 
 end
 
-function params = parse_input(varargin)
+function [params, unmatched] = parse_input(varargin)
 
 % Create inputParser instance
 p = inputParser;
+p.KeepUnmatched = true;
 
 % Pre-processing
 p.addParameter('overview_scale', 0.78);
@@ -90,4 +91,6 @@ p.addParameter('show_registration', false);
 % Validate and parse input
 p.parse(varargin{:});
 params = p.Results;
+unmatched = p.Unmatched;
+
 end

@@ -18,9 +18,23 @@ if params.verbosity > 0
     fprintf('== Loading section %d.\n', sec_num)
 end
 
+sec_path = get_section_path(sec_num);
+[~, sec_name] = fileparts(sec_path);
+sec_cache = fullfile(params.cache_path, [sec_name '.mat']);
+
+% Check if section is in cache
+if ~params.overwrite && exist(sec_cache, 'file')
+    cache = load(sec_cache);
+    sec = cache.sec;
+    fprintf('Loaded section from cache. XY features: %d, Z features: %d.\n', height(sec.xy_features), height(sec.z_features))
+    return
+end
+
 % Default values for a section structure
 sec.num = sec_num;
 sec.num_tiles = length(find_tile_images(get_section_path(sec_num)));
+sec.path = sec_path;
+sec.name = sec_name;
 sec.overview_scale = params.overview_scale;
 sec.tile_rough_scale = params.tile_rough_scale;
 sec.tile_z_scale = params.tile_z_scale;
@@ -63,6 +77,10 @@ p.addParameter('tile_rough_scale', 'auto');
 p.addParameter('tile_rough_rel_scale', 0.07);
 p.addParameter('tile_z_scale', 0.125);
 p.addParameter('tile_xy_scale', 1.0);
+
+% Cache path
+p.addParameter('cache_path', '/data/home/talmo/EMdata/W002/StitchData/sec_cache');
+p.addParameter('overwrite', false);
 
 % Validate and parse input
 p.parse(varargin{:});

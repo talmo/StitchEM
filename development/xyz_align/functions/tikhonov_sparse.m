@@ -1,20 +1,16 @@
-function [tforms, mean_error, varargout] = tikhonov(matchesA, matchesB, varargin)
-%TIKHONOV Solves a set of transformations for each tile in the match pair.
-% Registers fixed onto moving
+function [tforms, mean_error, varargout] = tikhonov_sparse(matchesA, matchesB, varargin)
+%TIKHONOV_SPARSE Solves a set of transformations for each tile in the match pair.
+% Usage:
+%   [tforms, mean_error] = TIKHONOV_SPARSE(matchesA, matchesB)
+%   [tforms, mean_error, stats] = TIKHONOV_SPARSE(...)
+%   TIKHONOV_SPARSE(..., 'Name', 'Value')
 %
-% This algorithm is also known as ridge regression, although the Tikhonov
-% matrix utilized is generally identity, whereas we use this form to solve
-% for our linear transformations.
+% Name-value pairs:
+%   'lambda', 0.005
+%   'adjust_error', true
+%   'verbosity', 1
 %
-% We minimize the cost function:
-% cost = ||A * x - b|| ^ 2 + ||gamma * x|| ^ 2
-% A contains one set of points for one seam per block row
-% b contains the same set of points but as a 2 column block vector
-% gamma contains two sets of points (correspondences) for one seam per
-%   block row (Tikhonov matrix)
-%
-% Reference: Tikhonov, A. N. (1963). [Solution of incorrectly formulated problems and the regularization method].
-% Doklady Akademii Nauk SSSR 151: 501504. Translated in Soviet Mathematics 4: 10351038.
+% See TIKHONOV for more info.
 
 [matchesA, matchesB, params] = parse_inputs(matchesA, matchesB, varargin{:});
 
@@ -34,8 +30,8 @@ tileIdxA = cellfun(@(sec_tile) find(tile_nums{sec_tile(1)} == sec_tile(2)), num2
 tileIdxB = cellfun(@(sec_tile) find(tile_nums{sec_tile(1)} == sec_tile(2)), num2cell([secIdxB matchesB.tile], 2));
 
 % Pre-allocate matrices
-A = zeros(num_matches, num_tiles * 3);
-gamma = zeros(num_matches, num_tiles * 3);
+A = spalloc(num_matches, num_tiles * 3, num_matches * 3);
+gamma = spalloc(num_matches, num_tiles * 3, num_matches * 6);
 
 % Calculate the column indices for each point
 colA = arrayfun(@(s) sum(num_sec_tiles(1:s-1)), secIdxA) * 3 + (tileIdxA - 1) * 3 + 1;
@@ -59,8 +55,10 @@ for i = 1:num_matches
 end
 
 % Solve
-x_hat = (params.lambda .^ 2 * (A' * A) + gamma' * gamma) \ (params.lambda .^ 2 * A' * b);
-%x_hat = x_hat(:, 1:2); % drop the last column (~[0 0 1]')
+%A = sparse(A);
+%gamma = sparse(gamma);
+%b = sparse(b);
+x_hat = full((params.lambda .^ 2 * (A' * A) + gamma' * gamma) \ (params.lambda .^ 2 * A' * b));
 
 % Sanity checking
 if any(any(isnan(x_hat)))
