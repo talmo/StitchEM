@@ -14,12 +14,14 @@ end
 
 if scale ~= 1.0
     % Scale the points
-    features = transformPointsForward(scale_tform(scale), features);
+    features = transformPointsForward(make_tform('scale', scale), features);
 end
+hold on
 
 % Plot the points
 plot(features(:,1), features(:,2), marker)
 
 integer_axes(1/scale);
+hold off
 end
 

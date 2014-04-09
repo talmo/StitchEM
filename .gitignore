@@ -5,3 +5,4 @@
 *.tif
 *.gitignore~
 *.fig
+development/xyz_align/renders/*

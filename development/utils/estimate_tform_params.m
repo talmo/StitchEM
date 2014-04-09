@@ -1,5 +1,10 @@
-function [scale, rotation, translation] = estimate_tform_params(tform)
+function varargout = estimate_tform_params(tform)
 %ESTIMATE_TFORM_PARAMS Estimates the parameters used in a transform.
+% Usage:
+%   [scale, rotation, translation] = ESTIMATE_TFORM_PARAMS(tform)
+%   ESTIMATE_TFORM_PARAMS(tform) % Outputs parameters
+% Notes:
+%   - tform can be a 3x3 transformation matrix or an affine2d object.
 
 %% Parameters
 if ~isa(tform, 'affine2d')
@@ -22,4 +27,11 @@ rotation = -atan2d(dy, dx);
 
 % Calculate scale
 scale = sqrt(dx^2 + dy^2);
+
+if nargout < 1
+    fprintf('Scale: %fx | Rotation: %f deg | Translation: [X: %12f, Y: %12f] px\n', ...
+        scale, rotation, translation(1), translation(2))
+else
+    varargout = {scale, rotation, translation};
+end
 end

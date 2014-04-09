@@ -34,8 +34,11 @@ if params.pre_scale ~= params.detection_scale
     end
 end
 
+% Initialize containers
+local_points = cell(length(params.regions), 1);
+descriptors = cell(length(params.regions), 1);
+
 % Detect features in each region
-features = table([], [], 'VariableNames', {'local_points', 'descriptors'});
 for i = 1:length(params.regions)
     R = params.regions{i};
     
@@ -57,31 +60,37 @@ for i = 1:length(params.regions)
         'NumScaleLevels', params.NumScaleLevels);
 
     % Get descriptors from pixels around interest points
-    [descriptors, valid_points] = extractFeatures(img, ...
+    [descriptors{i}, valid_points] = extractFeatures(img, ...
         interest_points, 'SURFSize', params.SURFSize);
 
     % Save valid points, i.e., points with descriptors
-    local_points = valid_points(:).Location;
+    local_pts = valid_points(:).Location;
     
     % Adjust point locations from region to tile
-    local_points = local_points + repmat([col(1) - 1, row(1) - 1], size(local_points, 1), 1);
+    local_pts = local_pts + repmat([col(1) - 1, row(1) - 1], size(local_pts, 1), 1);
     
     % Rescale to full resolution
-    local_points = local_points * 1 / params.detection_scale;
+    local_pts = local_pts * 1 / params.detection_scale;
     
-    % Append to table
-    features = [features; table(local_points, descriptors)];
+    % Save
+    local_points{i} = local_pts;
 end
 
+% Merge and build features table
+local_points = vertcat(local_points{:});
+descriptors = vertcat(descriptors{:});
+features = table(local_points, descriptors);
+num_features = height(features);
+
 if params.verbosity > 0
-    fprintf('Detected %d features in %d regions. [%.2fs]\n', size(local_points, 1), length(regions), toc(total_time));
+    fprintf('Detected %d features in %d regions. [%.2fs]\n', num_features, length(regions), toc(total_time));
 end
 
 %% Visualization
 if params.show_features
     % Display the tile (tile_img is at detection scale by this point)
     figure, imshow(tile_img), hold on
-    title(sprintf('Local Features (n = %d | detection scale = %s | regions = %d)', size(features.local_points, 1), num2str(params.detection_scale), length(params.regions)))
+    title(sprintf('Local Features (n = %d | detection scale = %s | regions = %d)', num_features, num2str(params.detection_scale), length(params.regions)))
     
     % Scale and plot the local points
     plot_features(features.local_points, params.detection_scale);

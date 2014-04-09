@@ -11,15 +11,17 @@ lambda_curve_time = tic;
 
 % Turn off warnings about bad scaling
 pctRunOnAll warning('off', 'MATLAB:nearlySingularMatrix')
+warning('off', 'MATLAB:nearlySingularMatrix')
 
 % Calculate transforms at different lambdas
 mean_errors = zeros(length(lambdas), 1);
 parfor i = 1:length(lambdas);
-    [~, mean_errors(i)] = tikhonov(matchesA, matchesB, 'lambda', lambdas(i), 'verbosity', 0, unmatched_params);
+    [~, mean_errors(i)] = tikhonov_sparse(matchesA, matchesB, 'lambda', lambdas(i), 'verbosity', 0, unmatched_params);
 end
 
 % Turn warnings about bad scaling back on
 pctRunOnAll warning('on', 'MATLAB:nearlySingularMatrix')
+warning('on', 'MATLAB:nearlySingularMatrix')
 
 if params.verbosity > 0
     [min_error, min_idx] = min(mean_errors);

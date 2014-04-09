@@ -1,4 +1,4 @@
-function [matchesA, matchesB] = match_section_features(sec, varargin)
+function [matchesA, matchesB, failed_tile_pairs] = match_section_features(sec, varargin)
 %MATCH_SECTION_FEATURES Find matches between neighboring tiles of a section.
 
 % Parse input
@@ -10,13 +10,14 @@ if params.verbosity > 0
 end
 
 % Loop through tiles
-matchesA = []; matchesB = [];
+matchesA = {}; matchesB = {}; 
+failed_tile_pairs = {}; num_matches = 0;
 for i = 1:sec.num_tiles - 1
-    % Find neighbors
+    % Find neighbor tiles
     neighbors = find(find_neighbors(i));
     
     for j = i + 1:sec.num_tiles
-        % Check if they are overlapping
+        % Check if tile j is a neighbor to tile i
         if ~any(neighbors == j)
             continue
         end
@@ -24,28 +25,56 @@ for i = 1:sec.num_tiles - 1
         
         % Find overlap between the two tiles
         overlap = calculate_overlaps(sec.rough_tforms([i, j]));
+        
+        % Check if overlap any overlap was found
+        if params.verbosity > 0 && isempty(overlap)
+            warning('Could not find overlap region between adjacent tiles %d <-> %d. This may be a result of bad rough alignment.', i, j)
+            failed_tile_pairs{end + 1} = [i, j];
+            continue
+        end
 
-        % Get features in region
+        % Get features in the overlap region
         featuresA = filter_features(sec.xy_features, i, overlap{1});
         featuresB = filter_features(sec.xy_features, j, overlap{1});
+        
+        % Check if enough features were found in the overlap region
+        if params.verbosity > 0 && (height(featuresA) < params.min_region_feats || height(featuresB) < params.min_region_feats)
+            warning('Too few features (%d < %d) in overlap region between tiles %d <-> %d. This may be a result of bad rough alignment.', height(featuresA), params.min_region_feats, i, j)
+            failed_tile_pairs{end + 1} = [i, j];
+            continue
+        end
 
         % Match
         [mA, mB] = match_feature_sets(featuresA, featuresB, ...
             'region_size', params.region_size, 'MatchThreshold', params.MatchThreshold, ...
             'MaxRatio', params.MaxRatio, 'filter_inliers', params.filter_inliers, ...
             unmatched_params);
-
-        % Save results
-        matchesA = [matchesA; mA]; matchesB = [matchesB; mB];
         
-        if params.verbosity > 1
-            fprintf('Found %d matches between tiles %d <-> %d. [%.2fs]\n', height(mA), i, j, toc(match_time))
+        % Count matches
+        num_seam_matches = height(mA);
+        num_matches = num_matches + num_seam_matches;
+        
+        % Save results
+        matchesA{end + 1} = mA;
+        matchesB{end + 1} = mB;
+        
+        if params.verbosity > 1 && height(mA) > 0
+            fprintf('Found %d matches between tiles %d <-> %d. [%.2fs]\n', num_seam_matches, i, j, toc(match_time))
+        end
+        
+        % Check for number of matches found
+        if params.verbosity > 0 && num_seam_matches == 0
+            warning('Found 0 matches between adjacent tiles %d <-> %d. This may be a result of bad rough alignment.', i, j)
+            failed_tile_pairs{end + 1} = [i, j];
         end
     end
 end
 
+% Merge match tables
+matchesA = vertcat(matchesA{:});
+matchesB = vertcat(matchesB{:});
+
 % Add match scale column
-num_matches = height(matchesA);
 matchesA.scale = repmat(sec.tile_xy_scale, num_matches, 1);
 matchesB.scale = repmat(sec.tile_xy_scale, num_matches, 1);
 
@@ -54,11 +83,17 @@ if params.verbosity > 0
 end
 
 if params.show_matches
-    figure
+    figure, hold on
+    % Render section
     imshow_section(sec, 'display_scale', params.display_scale);
-    hold on
+    
+    % Plot matches detected
     plot_matches(matchesA, matchesB, params.display_scale);
+    
+    % Adjust plot
+    title(sprintf('Matches in section %d (n = %d)', sec.num, num_matches))
     integer_axes(1 / params.display_scale)
+    set(gca, 'YDir', 'reverse')
     hold off
 end
 end
@@ -74,6 +109,9 @@ function [params, unmatched] = parse_inputs(varargin)
 % Create inputParser instance
 p = inputParser;
 p.KeepUnmatched = true;
+
+% Overlap detection
+p.addParameter('min_region_feats', 20);
 
 % XY matching parameters
 p.addParameter('region_size', 0);

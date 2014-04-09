@@ -38,7 +38,7 @@ p = inputParser;
 p.KeepUnmatched = true;
 
 % Use sparse solver
-p.addParameter('sparse_solver', false);
+p.addParameter('sparse_solver', true);
 
 % Validate and parse input
 p.parse(varargin{:});

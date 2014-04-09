@@ -21,5 +21,8 @@ end
 addpath(genpath(fullfile(script_path, 'classes')));
 addpath(genpath(fullfile(script_path, 'functions')));
 addpath(genpath(fullfile(script_path, 'development', 'utils')));
+
 addpath(genpath(fullfile(script_path, 'development', 'xyz_align')));
+cd(fullfile(script_path, 'development', 'xyz_align'))
+
 clear script_path

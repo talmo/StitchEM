@@ -1,13 +1,13 @@
-function sec = detect_section_features(sec, varargin)
+function [sec, num_features_xy, num_features_z] = detect_section_features(sec, varargin)
 %DETECT_SECTION_FEATURES Detects features in all the tiles of a section.
 % Usage:
-%   features = DETECT_SECTION_FEATURES(sec)
-%   features = DETECT_SECTION_FEATURES(..., 'Name', Value)
+%   sec = DETECT_SECTION_FEATURES(sec)
+%   sec = DETECT_SECTION_FEATURES(..., 'Name', Value)
 %
 % Name-Value pairs:
-%   'detection_scale', 0.25
+%   'detection_scale', 0.125
 %   'verbosity', 1
-% Any additional pairs will be passed to detect_tile_features().
+% Any additional arguments will be passed to detect_tile_features().
 
 % Parse inputs
 [params, unmatched_params] = parse_inputs(varargin{:});
@@ -34,79 +34,88 @@ local_points_z = cell(num_tiles, 1);
 global_points_z = cell(num_tiles, 1);
 descriptors_z = cell(num_tiles, 1);
 
-r = @(i) ceil(i/ 4); c = @(i) mod(i - 1, 4) + 1;
-
 if params.verbosity > 1
     fprintf('Initialized variables for parallelization. [%.2fs]\n', toc(total_time))
 end
 
 % Turn off warning about badly scaled or nearly singular matrix
 warning('off', 'MATLAB:nearlySingularMatrix')
+pctRunOnAll warning('off', 'MATLAB:nearlySingularMatrix')
 
-% Loop through tiles
-for tile_num = 1:num_tiles
-    tic;
+% Detect XY features
+parfor t = 1:num_tiles
+    tile_time = tic;
     % Find regions overlapping with neighbors
-    neighbors = arrayfun(@(i) sqrt((r(i) - r(tile_num)) .^ 2 +  (c(i) - c(tile_num)) .^ 2), 1:16) <= 1;
-    overlap_regions = calculate_overlaps(rough_alignments(neighbors));
+    neighbors = find(find_neighbors(t));
+    overlap_regions = calculate_overlaps(rough_alignments([t neighbors]));
     
     % Convert to regions local coordinates
-    overlap_regions = cellfun(@(x) rough_alignments{tile_num}.transformPointsInverse(x), overlap_regions, 'UniformOutput', false);
+    overlap_regions = cellfun(@(x) rough_alignments{t}.transformPointsInverse(x), overlap_regions, 'UniformOutput', false);
     
     % Detect XY features in tile
-    tile_xy_features = detect_tile_features(xy_tiles{tile_num}, 'regions', overlap_regions, ...
+    tile_xy_features = detect_tile_features(xy_tiles{t}, 'regions', overlap_regions, ...
         'detection_scale', params.xy_detection_scale, 'pre_scale', xy_prescale, ...
         'MetricThreshold', params.xy_MetricThreshold, unmatched_params);
     
+    % Save data
+    local_points_xy{t} = tile_xy_features.local_points;
+    global_points_xy{t} = rough_alignments{t}.transformPointsForward(tile_xy_features.local_points);
+    descriptors_xy{t} = tile_xy_features.descriptors;
+    
+    if params.verbosity > 1
+        fprintf('Detected %d XY features in tile %d [%.2fs]\n', height(tile_xy_features), t, toc(tile_time))
+    end
+end
+
+% Detect Z features
+for t = 1:num_tiles
+    tile_time = tic;
     % Detect Z features in tile
-    tile_z_features = detect_tile_features(z_tiles{tile_num}, ...
+    tile_z_features = detect_tile_features(z_tiles{t}, ...
         'detection_scale', params.z_detection_scale, 'pre_scale', z_prescale, ...
         'MetricThreshold', params.z_MetricThreshold, unmatched_params);
     
     % Save data
-    local_points_xy{tile_num} = tile_xy_features.local_points;
-    global_points_xy{tile_num} = rough_alignments{tile_num}.transformPointsForward(tile_xy_features.local_points);
-    descriptors_xy{tile_num} = tile_xy_features.descriptors;
-    
-    local_points_z{tile_num} = tile_z_features.local_points;
-    global_points_z{tile_num} = rough_alignments{tile_num}.transformPointsForward(tile_z_features.local_points);
-    descriptors_z{tile_num} = tile_z_features.descriptors;
+    local_points_z{t} = tile_z_features.local_points;
+    global_points_z{t} = rough_alignments{t}.transformPointsForward(tile_z_features.local_points);
+    descriptors_z{t} = tile_z_features.descriptors;
     
     if params.verbosity > 1
-        fprintf('Detected %d XY features and %d Z features in tile %d [%.2fs]\n', length(tile_xy_features.local_points), length(tile_z_features.local_points), tile_num, toc)
+        fprintf('Detected %d Z features in tile %d [%.2fs]\n', height(tile_z_features), t, toc(tile_time))
     end
 end
 
 % Turn warning about badly scaled or nearly singular matrix back on
 warning('on', 'MATLAB:nearlySingularMatrix')
+pctRunOnAll warning('on', 'MATLAB:nearlySingularMatrix')
 
 post_process_time = tic;
 
 % Post-process output (XY)
-tile_lengths_xy = cellfun('length', local_points_xy);
-num_xy_features = sum(tile_lengths_xy);
-id = (1:num_xy_features)';
+num_features_xy = cellfun('length', local_points_xy);
+total_xy_features = sum(num_features_xy);
+id = (1:total_xy_features)';
 local_points = vertcat(local_points_xy{:});
 global_points = vertcat(global_points_xy{:});
 descriptors = vertcat(descriptors_xy{:});
-section = repmat(sec.num, num_xy_features, 1);
-tile = cell2mat(arrayfun(@(t) repmat(t, tile_lengths_xy(t), 1), (1:length(tile_lengths_xy))', 'UniformOutput', false));
+section = repmat(sec.num, total_xy_features, 1);
+tile = cell2mat(arrayfun(@(t) repmat(t, num_features_xy(t), 1), (1:length(num_features_xy))', 'UniformOutput', false));
 
-% Build table
+% Build XY table
 sec.xy_features = table(id, local_points, global_points, descriptors, section, tile);
 
 
 % Post-process output (Z)
-tile_lengths_z = cellfun('length', local_points_z);
-num_z_features = sum(tile_lengths_z);
-id = (1:num_z_features)';
+num_features_z = cellfun('length', local_points_z);
+total_z_features = sum(num_features_z);
+id = (1:total_z_features)';
 local_points = vertcat(local_points_z{:});
 global_points = vertcat(global_points_z{:});
 descriptors = vertcat(descriptors_z{:});
-section = repmat(sec.num, num_z_features, 1);
-tile = cell2mat(arrayfun(@(t) repmat(t, tile_lengths_z(t), 1), (1:length(tile_lengths_z))', 'UniformOutput', false));
+section = repmat(sec.num, total_z_features, 1);
+tile = cell2mat(arrayfun(@(t) repmat(t, num_features_z(t), 1), (1:length(num_features_z))', 'UniformOutput', false));
 
-% Build table
+% Build Z table
 sec.z_features = table(id, local_points, global_points, descriptors, section, tile);
 
 
@@ -115,7 +124,7 @@ if params.verbosity > 1
 end
 
 if params.verbosity > 0
-    fprintf('Detected %d XY features and %d Z features. [%.2fs]\n', num_xy_features, num_z_features, toc(total_time))
+    fprintf('Detected %d XY features and %d Z features. [%.2fs]\n', total_xy_features, total_z_features, toc(total_time))
 end
 end
 

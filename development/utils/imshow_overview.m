@@ -1,5 +1,5 @@
-function varargout = imshow_montage(section_num, suppress_display)
-%IMSHOW_MONTAGE Shows the montage overview image for a section.
+function varargout = imshow_overview(section_num, suppress_display)
+%IMSHOW_OVERVIEW Shows the montage overview image for a section.
 
 if nargin < 2
     suppress_display = false;

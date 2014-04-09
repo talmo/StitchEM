@@ -83,7 +83,7 @@ p.addParameter('verbosity', 1);
 % Visualization
 p.addParameter('show_matches', false);
 p.addParameter('show_outliers', false);
-p.addParameter('display_scale', 0.075);
+p.addParameter('display_scale', 0.025);
 
 % Validate and parse input
 p.parse(varargin{:});

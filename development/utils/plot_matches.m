@@ -1,6 +1,14 @@
 function plot_matches(matched_pts1, matched_pts2, scale, alt_colors)
 %PLOT_MATCHES Plots the pair of matching points.
-
+% Usage:
+%   PLOT_MATCHES(matched_pts1, matched_pts2)
+%   PLOT_MATCHES(matched_pts1, matched_pts2, scale)
+%   PLOT_MATCHES(matched_pts1, matched_pts2, scale, alt_colors)
+%
+% Notes:
+%   - scale = 1.0 (default)
+%   - alt_colors = false (default), if true displays matches using
+%   alternative color scheme
 if nargin < 3
     scale = 1.0;
 end

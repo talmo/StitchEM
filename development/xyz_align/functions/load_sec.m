@@ -27,6 +27,22 @@ if ~params.overwrite && exist(sec_cache, 'file')
     cache = load(sec_cache);
     sec = cache.sec;
     fprintf('Loaded section from cache. XY features: %d, Z features: %d.\n', height(sec.xy_features), height(sec.z_features))
+    
+    % Load tile images
+    if params.load_tiles && (isempty(sec.img) || isempty(sec.img.xy_tiles))
+        load_time = tic;
+        [scaled_tiles, sec.img.xy_tiles] = imload_section_tiles(sec.num, {sec.tile_rough_scale, sec.tile_z_scale});
+        sec.img.rough_tiles = scaled_tiles(:, 1);
+        sec.img.z_tiles = scaled_tiles(:, 2);
+        fprintf('Loaded tile images. [%.2fs]\n', toc(load_time))
+    end
+    
+    % Load section overview
+    if params.load_overview && (isempty(sec.img) || isempty(sec.img.overview))
+        load_overview_time = tic;
+        sec.img.overview = imresize(imload_overview(sec_num), sec.overview_scale);
+        fprintf('Loaded and resized overview image. [%.2fs]\n', toc(load_overview_time))
+    end
     return
 end
 
@@ -78,9 +94,11 @@ p.addParameter('tile_rough_rel_scale', 0.07);
 p.addParameter('tile_z_scale', 0.125);
 p.addParameter('tile_xy_scale', 1.0);
 
-% Cache path
-p.addParameter('cache_path', '/data/home/talmo/EMdata/W002/StitchData/sec_cache');
+% Cache
+p.addParameter('cache_path', '/data/home/talmo/StitchEM/development/xyz_align/sec_cache');
 p.addParameter('overwrite', false);
+p.addParameter('load_tiles', false);
+p.addParameter('load_overview', false);
 
 % Validate and parse input
 p.parse(varargin{:});

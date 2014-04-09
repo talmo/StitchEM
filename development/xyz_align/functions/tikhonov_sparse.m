@@ -14,51 +14,61 @@ function [tforms, mean_error, varargout] = tikhonov_sparse(matchesA, matchesB, v
 
 [matchesA, matchesB, params] = parse_inputs(matchesA, matchesB, varargin{:});
 
-tic
-% Figure out some constants
+tic;
+
+% Calculate some constants for indexing
 sec_nums = unique([unique(matchesA.section); unique(matchesB.section)]);
 num_secs = length(sec_nums);
-num_matches = size(matchesA, 1);
-tile_nums = arrayfun(@(sec) unique([matchesA.tile(matchesA.section == sec); matchesB.tile(matchesB.section == sec)]), sec_nums, 'UniformOutput', false);
-num_sec_tiles = cellfun(@(x) length(x), tile_nums);
-num_tiles = sum(num_sec_tiles);
+tile_nums = arrayfun(@(s) unique([unique(matchesA.tile(matchesA.section == s)); unique(matchesB.tile(matchesB.section == s))]), sec_nums, 'UniformOutput', false);
+num_tiles = cellfun(@(t) length(t), tile_nums);
+cum_num_tiles = cumsum(num_tiles) - num_tiles(1);
 
-% Use indices instead of the actual tile/section number
-secIdxA = arrayfun(@(s) find(sec_nums == s), matchesA.section);
-secIdxB = arrayfun(@(s) find(sec_nums == s), matchesB.section);
-tileIdxA = cellfun(@(sec_tile) find(tile_nums{sec_tile(1)} == sec_tile(2)), num2cell([secIdxA matchesA.tile], 2));
-tileIdxB = cellfun(@(sec_tile) find(tile_nums{sec_tile(1)} == sec_tile(2)), num2cell([secIdxB matchesB.tile], 2));
+total_tiles = cum_num_tiles(end) + num_tiles(1);
+num_matches = height(matchesA);
 
-% Pre-allocate matrices
-A = spalloc(num_matches, num_tiles * 3, num_matches * 3);
-gamma = spalloc(num_matches, num_tiles * 3, num_matches * 6);
-
-% Calculate the column indices for each point
-colA = arrayfun(@(s) sum(num_sec_tiles(1:s-1)), secIdxA) * 3 + (tileIdxA - 1) * 3 + 1;
-colB = arrayfun(@(s) sum(num_sec_tiles(1:s-1)), secIdxB) * 3 + (tileIdxB - 1) * 3 + 1;
-
-% Pad the points
-ptsA_padded = [matchesA.global_points ones(num_matches, 1)];
-ptsB_padded = [matchesB.global_points ones(num_matches, 1)];
-
-% The b vector is pretty trivial, just the moving points padded with ones
-b = double(ptsB_padded);
-
-% Fill out matrices with matched points
-for i = 1:num_matches
-    % Fill in row for rigidity matrix (A)
-    A(i, colB(i):colB(i) + 2) = ptsB_padded(i, :);
+% Build index arrays
+Ja = zeros(height(matchesA), 1);
+Jb = zeros(height(matchesB), 1);
+for s = 1:num_secs
+    tile_idx = zeros(1, length(tile_nums{s}));
+    for t = min(tile_nums{s}):max(tile_nums{s})
+        idx = find(tile_nums{s} == t, 1);
+        if ~isempty(idx)
+            tile_idx(t) = idx;
+        end
+    end
     
-    % Fill in row for alignment matrix (gamma)
-    gamma(i, colB(i):colB(i) + 2) = ptsB_padded(i, :);
-    gamma(i, colA(i):colA(i) + 2) = -ptsA_padded(i, :);
+    Ia = matchesA.section == sec_nums(s);
+    Ja(Ia) = cum_num_tiles(s) * 3 + (tile_idx(matchesA.tile(Ia)) - 1) * 3 + 1;
+    
+    Ib = matchesB.section == sec_nums(s);
+    Jb(Ib) = cum_num_tiles(s) * 3 + (tile_idx(matchesB.tile(Ib)) - 1) * 3 + 1;
 end
 
+Ia = repmat((1:num_matches)', 3, 1);
+Ib = repmat((1:num_matches)', 3, 1);
+
+Ja = [Ja; Ja + 1; Ja + 2];
+Jb = [Jb; Jb + 1; Jb + 2];
+
+% Points
+Sa = -[double(matchesA.global_points(:)); ones(num_matches, 1)];
+Sb = [double(matchesB.global_points(:)); ones(num_matches, 1)];
+
+% Sparse matrix sizes
+m = num_matches;
+n = total_tiles * 3;
+nnzA = num_matches * 3;
+nnzGamma = nnzA * 2;
+
+% Create sparse matrices
+A = sparse(Ib, Jb, Sb, m, n, nnzA);
+gamma = sparse([Ib; Ia], [Jb; Ja], [Sb; Sa], m, n, nnzGamma);
+b = reshape(Sb, num_matches, 3);
+
 % Solve
-%A = sparse(A);
-%gamma = sparse(gamma);
-%b = sparse(b);
 x_hat = full((params.lambda .^ 2 * (A' * A) + gamma' * gamma) \ (params.lambda .^ 2 * A' * b));
+x_hat = [x_hat(:, 1:2) repmat([0 0 1]', size(x_hat, 1) / 3, 1)]; % Fix last column
 
 % Sanity checking
 if any(any(isnan(x_hat)))
@@ -66,36 +76,19 @@ if any(any(isnan(x_hat)))
 end
 
 % Splice out solution into tforms
-tforms = cell(num_secs, max([max(matchesA.tile); max(matchesB.tile)]));
+Ts = cellfun(@(T) {affine2d(T)}, mat2cell(x_hat, repmat(3, 1, total_tiles), 3));
+tforms = cell(num_secs, max(num_tiles));
 for s = 1:num_secs
-    for t = 1:length(tile_nums{s})
-        i = sum(num_sec_tiles(1:s-1)) * 3 + (t - 1) * 3 + 1; % row in x_hat
-        t2 = tile_nums{s}(t);
-        tforms{s, t2} = affine2d([x_hat(i:i+2, 1:2) [0 0 1]']);
-    end
+    tforms(s, 1:num_tiles(s)) = Ts(cum_num_tiles(s) + 1: cum_num_tiles(s) + num_tiles(s));
 end
 
 % Transform matching points to estimate error
-registered_ptsA = zeros(size(matchesA, 1), 2);
-registered_ptsB = zeros(size(matchesB, 1), 2);
-for s = 1:num_secs
-    for t = 1:num_sec_tiles(s)
-        idxA = secIdxA == s & tileIdxA == t;
-        global_pointsA = matchesA.global_points(idxA, :);
-        if ~isempty(global_pointsA)
-            registered_ptsA(idxA, 1:2) = tforms{s, tile_nums{s}(t)}.transformPointsForward(global_pointsA);
-        end
-        
-        idxB = secIdxB == s & tileIdxB == t;
-        global_pointsB = matchesB.global_points(idxB, :);
-        if ~isempty(global_pointsB)
-            registered_ptsB(idxB, 1:2) = tforms{s, tile_nums{s}(t)}.transformPointsForward(global_pointsB);
-        end
-    end
-end
+ptsA_sp = sparse(Ia, Ja, -Sa, m, n, nnzA);
+ptsA = ptsA_sp * x_hat; ptsB = A * x_hat;
+ptsA = ptsA(:, 1:2);    ptsB = ptsB(:, 1:2);
 
 % Calculate registration error
-distances = calculate_match_distances(registered_ptsA, registered_ptsB);
+distances = calculate_match_distances(ptsA, ptsB);
 
 % Adjust error for scale
 if params.adjust_error

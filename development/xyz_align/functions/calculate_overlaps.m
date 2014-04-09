@@ -1,10 +1,15 @@
-function overlaps = calculate_overlaps(tforms, varargin)
+function [overlaps, tile_pairs] = calculate_overlaps(tforms, varargin)
 %CALCULATE_OVERLAPS Calculates boundaries of the overlapping regios after applying a set of transforms.
 % Usage:
 %   overlaps = CALCULATE_OVERLAPS(tforms)
+%   [overlaps, tile_pairs] = CALCULATE_OVERLAPS(tforms)
 %   overlaps = CALCULATE_OVERLAPS(tforms, 'tile_size', [width height])
+%
 % Returns a cell array of overlapping regions of the form:
-%   {[x, y, width, height]}
+%   overlaps = {[x, y, width, height]}
+% And which tiles are being overlapped:
+%   tile_pairs = {[i, j]}
+% Note that the i,j indices are relative to the inputed transforms!
 
 % Parse inputs
 if length(tforms) < 2
@@ -25,19 +30,19 @@ tiles = cellfun(@(t) t.transformPointsForward(tile), tforms, 'UniformOutput', fa
 if params.visualize
     figure
     colors = get(0,'DefaultAxesColorOrder');
-    set(gca,'YDir','reverse');
-    integer_axes();
     for i = 1:length(tiles)
         X = [tiles{i}(:, 1); tiles{i}(1, 1)];
         Y = [tiles{i}(:, 2); tiles{i}(1, 2)];
         plot(X, Y, '-x', 'Color', colors(rem(i - 1, size(colors, 1)) + 1, :));
         hold on
     end
+    set(gca,'YDir','reverse');
+    integer_axes();
     hold off
 end
 
 % Look for overlap
-overlaps = {};
+overlaps = {}; tile_pairs = {};
 for i = 1:length(tiles) - 1
     Xi = [tiles{i}(:, 1); tiles{i}(1, 1)];
     Yi = [tiles{i}(:, 2); tiles{i}(1, 2)];
@@ -143,8 +148,9 @@ for i = 1:length(tiles) - 1
             continue
         end
 
-        % Save to overlaps
+        % Save
         overlaps{end + 1} = P(1:end - 1, :);
+        tile_pairs{end + 1} = [i , j];
         
         % Plot the vertices of the intersected region
         if params.visualize

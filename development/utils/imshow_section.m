@@ -7,14 +7,27 @@ function varargout = imshow_section(sec, varargin)
 %   IMSHOW_SECTION('tile_imgs', tile_imgs, 'tforms', tforms)
 %   IMSHOW_SECTION(..., 'Name', Value)
 %   [merge, merge_R] = IMSHOW_SECTION(...)
+%
+% Name-Value pairs:
+%   'pre_scale', 1.0
+%   'display_scale', 0.025
+%   'suppress_display', false
+%   'method', 'max'
+%
+% Notes:
+%   - You can pass a sec_struct without any images stored to load the
+%   images from disk.
+%   - The tforms parameter can take a cell array of transforms, or if a
+%   sec_struct was passed in, 'rough' or 'fine' can be used to specify
+%   which set of transforms to use. Rough transforms are used by default.
 
+total_time = tic;
 
 % Parse parameters
 [tile_imgs, tforms, sec_num, params] = parse_inputs(sec, varargin{:});
 num_tiles = length(tile_imgs);
 
-total_time = tic;
-fprintf('Merging section %d at %sx scale.\n', sec_num, num2str(params.display_scale))
+if params.verbosity > 0; fprintf('Merging section %d at %sx scale.\n', sec_num, num2str(params.display_scale)); end
 
 % Adjust transforms to display scale
 tform_prescale = scale_tform(1 / params.display_scale); % scale to full resolution assuming we start at display scale
@@ -55,8 +68,6 @@ parfor tile_num = 1:num_tiles
     
     % Save
     final_tiles{tile_num} = tile;
-    
-    %fprintf('Transformed tile %d. [%.2fs]\n', tile_num, toc)
 end
 
 % Merge stack of tiles
@@ -69,8 +80,11 @@ pctRunOnAll warning('on', 'MATLAB:nearlySingularMatrix')
 
 % Display the image
 if ~params.suppress_display
+    % Show image without warning about scale
+    warning('off', 'images:initSize:adjustingMag')
     imshow(merge, merge_R)
     
+    % Adjust figure
     if sec_num ~= 0
         sec_str = [' ' num2str(sec_num)];
     else
@@ -78,6 +92,7 @@ if ~params.suppress_display
     end
     title(sprintf('Merged section%s (%d tiles)', sec_str, length(tile_imgs)))
     integer_axes(1/params.display_scale)
+    warning('on', 'images:initSize:adjustingMag')
 end
 
 % Return the merge
@@ -110,6 +125,9 @@ p.addParameter('suppress_display', false);
 % Image blending method
 p.addParameter('method', 'max');
 
+% Debugging/development
+p.addParameter('verbosity', 1);
+
 % Validate and parse input
 p.parse(sec_arg, varargin{:});
 sec = p.Results.sec;
@@ -117,24 +135,35 @@ tile_imgs = p.Results.tile_imgs;
 tforms = p.Results.tforms;
 params = rmfield(p.Results, {'sec', 'tile_imgs', 'tforms'});
 
-% Section structure was passed in (sec_struct() output)
+% Section structure was passed in (structure created in load_sec())
 if isstruct(sec)
     sec_num = sec.num;
-    fprintf('Merging pre-loaded section %d.\n', sec_num)
+    if params.verbosity > 1; fprintf('Using pre-loaded structure for section %d.\n', sec_num); end
+    
+    % Transforms
     if isempty(tforms) || (ischar(tforms) && strcmp(tforms, 'rough'))
         tforms = sec.rough_tforms;
-        disp('Using rough alignments to display tiles.')
+        if params.verbosity > 1; disp('Using rough alignments to display tiles.'); end
     elseif ischar(tforms) && strcmp(tforms, 'fine')
         tforms = sec.fine_tforms;
-        disp('Using fine alignments to display tiles.')
+        if params.verbosity > 1; disp('Using fine alignments to display tiles.'); end
     end
-    if abs(params.display_scale - sec.tile_rough_scale) < abs(params.display_scale - 1.0)
+    
+    % Tile images
+    if ~isempty(sec.img) && ~isempty(sec.img.rough_tiles) && sec.tile_rough_scale >= params.display_scale
         tile_imgs = sec.img.rough_tiles;
         params.pre_scale = sec.tile_rough_scale;
-        fprintf('Using pre-scaled tiles at %sx scale.\n', num2str(sec.tile_rough_scale))
-    else
+        if params.verbosity > 1; fprintf('Using rough tiles to render (%sx).\n', num2str(sec.tile_rough_scale)); end
+        
+    elseif ~isempty(sec.img) && ~isempty(sec.img.z_tiles) && sec.tile_z_scale >= params.display_scale
+        tile_imgs = sec.img.z_tiles;
+        params.pre_scale = sec.tile_z_scale;
+        if params.verbosity > 1; fprintf('Using Z tiles to render (%sx).\n', num2str(sec.tile_z_scale)); end
+        
+    elseif ~isempty(sec.img) && ~isempty(sec.img.xy_tiles)
         tile_imgs = sec.img.xy_tiles;
-        disp('Using full resolution tiles.')
+        params.pre_scale = sec.tile_xy_scale;
+        if params.verbosity > 1; fprintf('Using XY tiles to render (%sx).\n', num2str(sec.tile_xy_scale)); end
     end
 else
     sec_num = sec;
@@ -145,22 +174,23 @@ if isempty(tile_imgs)
     if sec_num == 0
         error('You must either specify a section number or input an array of tile images.')
     end
-    tic;
-    fprintf('Loading tile images for section %d...', sec_num)
+    if params.verbosity > 0; load_tiles_time = tic; fprintf('Loading tile images for section %d...', sec_num); end
+    
     % Load
     tile_imgs = imload_section_tiles(sec_num, params.display_scale);
     
     % Adjust the pre_scale parameter
     params.pre_scale = params.display_scale;
-    fprintf(' Done. [%.2fs]\n', toc)
+    if params.verbosity > 0; fprintf(' Done. [%.2fs]\n', toc(load_tiles_time)); end
 end
 
 % Initialize transform container if it's empty
 if isempty(tforms)
     tforms = cell(length(tile_imgs), 1);
+    if params.verbosity > 1; disp('Using grid alignments to display tiles.'); end
 end
 
-% Fill in any missing trasforms by aligning to grid
+% Fill in any missing transforms by aligning to grid
 if any(cellfun('isempty', tforms))
     tforms = estimate_tile_grid_alignments(tforms);
 end
