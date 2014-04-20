@@ -2,9 +2,10 @@
 % Note: Doesn't save the images.
 
 % Parameters
-sec_nums = 1:149; % 1-149, 19 is missing
+wafer_path = '/data/home/talmo/EMdata/S2-W003';
+sec_nums = 1:169;
 num_secs = length(sec_nums);
-save_path = './sec_cache';
+save_path = './S2-W003_data/features';
 
 % Keep track of failures and statistics
 couldnt_load = {};
@@ -23,7 +24,7 @@ for i = 1:num_secs
     
     % Load section
     try
-        sec = load_sec(sec_num, 'overwrite', true);
+        sec = load_sec(sec_num, 'wafer_path', wafer_path, 'overwrite', true);
     catch
         warning('Could not load section %d.', sec_num)
         couldnt_load{end + 1} = sec_num;
@@ -67,4 +68,5 @@ for i = 1:num_secs
 end
 
 %% Save statistics and run data
-save(sprintf('sec%d-%d_feature_detection_data.mat', sec_nums(1), sec_nums(end)), 'couldnt_load', 'failed_overview_registration', 'failed_feature_detection', 'num_grid_aligned', 'num_features_xy', 'num_features_z')
+save(fullfile(save_path, sprintf('sec%d-%d_feature_detection_data.mat', sec_nums(1), sec_nums(end))), ...
+    'couldnt_load', 'failed_overview_registration', 'failed_feature_detection', 'num_grid_aligned', 'num_features_xy', 'num_features_z')

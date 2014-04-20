@@ -126,7 +126,7 @@ disp('Sections sorted by # of Z matches:')
 disp(num2str([num_z_matches_sorted_idx(1:k),  num_z_matches_sorted(1:k)], '%d: %d\n'))
 
 %% Visualize matches
-i = 49; j = i-1;
+i = 89; j = i-1;
 
 % XY matches:
 figure, imshow_section(load_sec(i));
@@ -137,7 +137,7 @@ plot_seams(secs{i}.rough_tforms, 0.025)
 %figure, imshow_section_matches(matchesA, matchesB, i, j);
 
 %% Show a pair of sections with the Z matches
-i = 15; j = i-1;
+i = 51; j = i-1;
 
 figure, imshow_section_pair(i, j);
 plot_section_matches(matchesA, matchesB, i, j);

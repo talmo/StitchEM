@@ -18,7 +18,7 @@ if params.verbosity > 0
     fprintf('== Loading section %d.\n', sec_num)
 end
 
-sec_path = get_section_path(sec_num);
+sec_path = get_section_path(sec_num, params.wafer_path);
 [~, sec_name] = fileparts(sec_path);
 sec_cache = fullfile(params.cache_path, [sec_name '.mat']);
 
@@ -64,7 +64,7 @@ sec.z_features = table();
 
 % Load montage overview
 load_overview_time = tic;
-sec.img.overview = imresize(imload_overview(sec_num), sec.overview_scale);
+sec.img.overview = imresize(imload_overview(sec_num, params.wafer_path), sec.overview_scale);
 if params.verbosity > 0
     fprintf('Loaded and resized overview image. [%.2fs]\n', toc(load_overview_time))
 end
@@ -72,7 +72,7 @@ end
 % Load tile images and resize them
 load_tiles_time = tic;
 scales = {sec.tile_rough_scale, sec.tile_z_scale};
-[scaled_tiles, sec.img.xy_tiles] = imload_section_tiles(sec.num, scales);
+[scaled_tiles, sec.img.xy_tiles] = imload_section_tiles(sec.num, scales, params.wafer_path);
 sec.img.rough_tiles = scaled_tiles(:, 1);
 sec.img.z_tiles = scaled_tiles(:, 2);
 if params.verbosity > 0
@@ -99,6 +99,9 @@ p.addParameter('cache_path', '/data/home/talmo/StitchEM/development/xyz_align/se
 p.addParameter('overwrite', false);
 p.addParameter('load_tiles', false);
 p.addParameter('load_overview', false);
+
+% Wafer path
+p.addParameter('wafer_path', '/data/home/talmo/EMdata/W002');
 
 % Validate and parse input
 p.parse(varargin{:});

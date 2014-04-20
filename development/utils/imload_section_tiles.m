@@ -1,4 +1,4 @@
-function varargout = imload_section_tiles(sec_num, tile_scales)
+function varargout = imload_section_tiles(sec_num, tile_scales, wafer_path)
 %IMLOAD_SECTION_TILES Loads and optionally rescales the tile images of a section.
 % Usage:
 %   tiles = IMLOAD_SECTION_TILES(sec_num)
@@ -12,6 +12,9 @@ function varargout = imload_section_tiles(sec_num, tile_scales)
 if nargin < 2
     tile_scales = {};
 end
+if nargin < 3
+    wafer_path = '/data/home/talmo/EMdata/W002';
+end
 
 % Convert scales to cell array
 if ~iscell(tile_scales)
@@ -22,7 +25,7 @@ end
 tile_scales(cellfun(@(x) x == 1.0, tile_scales)) = [];
 
 % Get the paths to the images
-tile_paths = get_tile_path(sec_num);
+tile_paths = get_tile_paths(sec_num, wafer_path);
 
 % Initialize stuff for parallelization
 num_tiles = length(tile_paths);
@@ -33,7 +36,7 @@ keep_full = nargout > 1;
 % Load and resize tiles in parallel
 parfor t = 1:num_tiles
     % Load full tile
-    tile = imload_tile(sec_num, t);
+    tile = imload_tile(sec_num, t, 1.0, wafer_path);
     if isempty(tile_scales) || keep_full
         tiles{t} = tile;
     end

@@ -3,7 +3,7 @@
 %% Load matches
 % Choose match set
 match_sets = dir('match_sets/sec*.mat');
-current_set = 2;
+current_set = 6;
 
 % Load to workspace
 match_set = match_sets(current_set).name;
@@ -30,17 +30,40 @@ fprintf('Match set %s: Loaded %d matches from cache [%.2fs].\n', match_set, heig
 % Narrow down to a local minimum to find the ideal parameter
 %lambda_curve(matchesA, matchesB, linspace(0.125 - 0.05, 0.125 + 0.05, 50), 'log_plot', false)
 
+%% Find best lambda
+% Calculate slopes (approximate derivative)
+dErr = diff(mean_errors) ./ diff(lambdas);
+
+% Find local minima
+minima = find([false; (dErr(2:end-1) < dErr(3:end)) & (dErr(2:end-1) < dErr(1:end-2)); false]);
+
+% Plot rigidity curve and its derivative
+figure, subplot(1, 2, 1)
+semilogx(lambdas, mean_errors, 'bx-', lambdas(minima), mean_errors(minima), 'ro')
+title('Rigidity curve')
+xlabel('lambda')
+ylabel('Mean registration error (px)')
+
+subplot(1, 2, 2)
+loglog(lambdas(1:end-1), dErr, 'cx-', lambdas(minima), dErr(minima), 'ro')
+title('Approximate derivative')
+xlabel('lambda')
+ylabel('\deltaError/\deltalambda')
+
 %% Solve transforms
 % The lambda to use for the rigidity parameter
-lambda = 0.015;
+%lambda = lambdas(minima);
+
+lambda = 0.0189281615401724; % point of inflection
+%lambda = 0.000574164245593572; % low end of plateau
+%lambda = 0.423161379345088; % high end of plateau
 
 % Solve for the transforms
 secs = align_section_stack(secs, matchesA, matchesB, 'lambda', lambda);
 
 %% Render
-%profile clear
-%profile on
-render_path = sprintf('renders/sec%d-%d', secs{1}.num, secs{end}.num);
+
+%render_path = sprintf('renders/sec%d-%d', secs{1}.num, secs{end}.num);
+render_path = 'renders/sec22-149_matches_2014-04-09_high_lambda';
 
 render_stack(secs, 'render_scale', 1.0, 'path', render_path)
-%profile viewer
