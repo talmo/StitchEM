@@ -1,4 +1,4 @@
-function varargout = lambda_curve(matchesA, matchesB, varargin)
+function [varargout] = lambda_curve(matchesA, matchesB, varargin)
 %LAMBDA_CURVE Plot the curve of lambda vs error for a pair of matchsets.
 
 % Process input

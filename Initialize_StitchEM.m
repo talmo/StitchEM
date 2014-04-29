@@ -1,28 +1,13 @@
-% Prepares the environment so you can use StitchEM correctly.
+% Prepares the MATLAB environment so you can use StitchEM correctly.
 
 %% Paths
-script_path = pwd;
+% Add StitchEM functions to MATLAB search path
+addpath(genpath(fullfile(pwd, 'functions')));
 
-% Check if we have our critical folders
-if ~isdir('functions')
-    response = input(['It appears this script is missing some essential folders.\n' ...
-        'This may be because the program was downloaded incorrectly.\n\n' ...
-        'The necessary scripts may not be in the path, do you want to continue anyway? ([Y]es/[N]o)\n'], 's');
-    if ~strcmpi(response(1), 'y')
-        fprintf('Stopping initialization. Try re-downloading StitchEM.\n')
-        return
-    end
-    clear response
-end
+% Set the current wafer path
+waferpath('/data/home/talmo/EMdata/W002');
 
-%% Add paths
-% Add all the functions and classes for StitchEM to the path so they are
-% callable from anywhere
-addpath(genpath(fullfile(script_path, 'classes')));
-addpath(genpath(fullfile(script_path, 'functions')));
-addpath(genpath(fullfile(script_path, 'development', 'utils')));
+% To change the patterns used to look for sections/tiles, modify:
+%   functions/IO/get_path_info.m
 
-addpath(genpath(fullfile(script_path, 'development', 'xyz_align')));
-cd(fullfile(script_path, 'development', 'xyz_align'))
-
-clear script_path
+% To change the path to the cache folder, call: waferpath(new_path)
