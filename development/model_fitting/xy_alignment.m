@@ -1,6 +1,6 @@
 %% Initialization
 % Load images and such
-sec = load_sec(102, 'from_cache', false);
+sec = load_sec(101, 'from_cache', false);
 
 %% Rough alignment
 % Register the tiles to their overviews

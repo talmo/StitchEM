@@ -5,8 +5,9 @@ function c = cross2(A, B)
 % vectors [Ax Ay 0] and [Bx By 0].
 %
 % Notes:
-%   - This is the same thing as perpdot(A, B).
-%   - When c = 0, A and B are parallel or coincident.
+%   - When c = 0, A and B are both perpendicular to the same vector.
+%       => This implies A and B are either collinear.
+%   - This is the same thing as perpdot(A, B), but slightly faster.
 %
 % Reference:
 %   http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/565282#565282

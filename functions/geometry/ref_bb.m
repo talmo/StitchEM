@@ -1,15 +1,15 @@
-function varargout = refmbb(R, which_limits)
-%REFMBB Finds the minimum bounding box of the limits of the spatial referencing object.
+function varargout = ref_bb(R, which_limits)
+%REF_BB Finds the minimum bounding box of the limits of the spatial referencing object.
 % Computes the minimum axis-aligned bounding box of the limits of the 
 % spatial referencing object.
 %
 % Usage:
-%   V = refmbb(R)
-%   V = refmbb(R, which_limits)
-%   [Vx, Vy] = refmbb(...)
+%   V = ref_bb(R)
+%   V = ref_bb(R, which_limits)
+%   [Vx, Vy] = ref_bb(...)
 %
 % Args:
-%   R is an instance of the imref2d class.
+%   R is an imref2d object.
 %   which_limits specifies which set of point limits to use for bounding.
 %       - Defaults to 'global' or 'world'.
 %       - Can also be 'intrinsic' or 'local', both of which refer to the
@@ -19,7 +19,7 @@ function varargout = refmbb(R, which_limits)
 %   V (Mx2) or [Vx, Vy] (both Mx1), the set of vertices of the minimum AABB
 %       (a rectangle/convex polynomial).
 %
-% See minaabb() for more info.
+% See also: minaabb, ref_bb, sz2bb, sec_bb
 
 
 % Parse input

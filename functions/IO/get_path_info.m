@@ -1,5 +1,13 @@
-function info = get_path_info(path)
+function info = get_path_info(path, field)
 %GET_PATH_INFO Returns info on the tile or section based on the path.
+%
+% Usage:
+%   info = get_path_info(path);
+%   info_field = get_path_info(path, field); % returns info.(field)
+
+if nargin < 2
+    field = '';
+end
 
 %% Regular expressions for naming patterns
 % Change these if using a different naming convention
@@ -43,10 +51,22 @@ elseif ~isempty(sec_matches)
     info.type = 'section';
     info.wafer = sec_matches.wafer;
     info.section = str2double(sec_matches.sec);
+    [~, info.name] = fileparts(info.path);
     if info.exists
+        info.overview = dir_regex(path, overview_pattern);
         info.tiles = dir_regex(path, tile_pattern);
         info.num_tiles = length(info.tiles);
-        info.overview = dir_regex(path, overview_pattern);
+        
+        tile_rows = cellfun(@(t) get_path_info(t, 'row'), fullfile(info.path, info.tiles));
+        tile_cols = cellfun(@(t) get_path_info(t, 'col'), fullfile(info.path, info.tiles));
+        
+        info.rows = max(tile_rows);
+        info.cols = max(tile_cols);
+        
+        info.grid = zeros(info.rows, info.cols);
+        for i = 1:info.num_tiles
+            info.grid(tile_rows(i), tile_cols(i)) = i;
+        end
     end
 elseif info.exists
     % This is a wafer folder if it contains section folders
@@ -65,6 +85,10 @@ end
 
 if isempty(info.type)
     warning('Specified path is not a wafer, section or tile folder.')
+end
+
+if ~isempty(field)
+    info = info.(field);
 end
 end
 

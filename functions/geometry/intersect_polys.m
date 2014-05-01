@@ -12,8 +12,8 @@ if ~bb_hittest(P, Q)
 end
 
 % Make sure P and Q are convex hulls
-P = P(convhull(P), :);
-Q = Q(convhull(Q), :);
+P = P(convhull(double(P), 'simplify', true), :);
+Q = Q(convhull(double(Q), 'simplify', true), :);
 
 % Find intersections between every pair of edges in P and Q
 for i = 1:size(P, 1) - 1
@@ -32,6 +32,6 @@ QinP = inpolygon(Q(:, 1), Q(:, 2), P(:, 1), P(:, 2));
 I = [I; P(PinQ, :); Q(QinP, :)];
 
 % Format as convex hull of all intersecting points
-I = I(convhull(I), :);
+I = I(convhull(double(I), 'simplify', true), :);
 end
 

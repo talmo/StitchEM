@@ -11,18 +11,15 @@ function sec = load_sec(sec_num, varargin)
 %   'tile_xy_scale', 1.0
 %   'verbosity', 1
 
-% Parse inputs
+%% Parse inputs
 params = parse_inputs(varargin{:});
+if params.verbosity > 0; fprintf('== Loading section %d.\n', sec_num); end
 
-if params.verbosity > 0
-    fprintf('== Loading section %d.\n', sec_num)
-end
+%% Path info
+info = get_path_info(get_section_path(sec_num, params.wafer_path));
+features_cache = fullfile(params.cache_path, 'features', [info.name '.mat']);
 
-sec_path = get_section_path(sec_num, params.wafer_path);
-info = get_path_info(sec_path);
-[~, sec_name] = fileparts(info.path);
-features_cache = fullfile(params.cache_path, 'features', [sec_name '.mat']);
-
+%% Cache
 % Check if section is in cache
 if params.from_cache && exist(features_cache, 'file')
     cache = load(features_cache);
@@ -47,37 +44,54 @@ if params.from_cache && exist(features_cache, 'file')
     return
 end
 
-% Default values for a section structure
+%% Section information and metadata
+% Info
 sec.num = sec_num;
-sec.num_tiles = length(find_tiles(get_section_path(sec_num)));
-sec.path = sec_path;
-sec.name = sec_name;
+sec.name = info.name;
+sec.path = info.path;
+sec.num_tiles = info.num_tiles;
+sec.rows = info.rows;
+sec.cols = info.cols;
+sec.grid = info.grid;
+
+% Alignments
+sec.alignments.initial.tforms = repmat({affine2d()}, sec.num_tiles, 1);
+
+% Tile sizes
+sec.tile_sizes = arrayfun(@(t) get_tile_size(sec.num, t), 1:sec.num_tiles, 'UniformOutput', false)';
+
+% Legacy
 sec.overview_scale = params.overview_scale;
 sec.tile_rough_scale = params.tile_rough_scale;
 sec.tile_z_scale = params.tile_z_scale;
 sec.tile_xy_scale = params.tile_xy_scale;
-sec.overview_tform = affine2d();
 sec.rough_tforms = cell(sec.num_tiles, 1);
 sec.fine_tforms = cell(sec.num_tiles, 1);
 sec.grid_aligned = [];
 sec.xy_features = table();
 sec.z_features = table();
 
-% Load montage overview
+%% Image Loading
+% Montage overview
+sec.overview_tform = affine2d();
 load_overview_time = tic;
 sec.img.overview = imload_overview(sec.num, sec.overview_scale, params.wafer_path);
-if params.verbosity > 0
-    fprintf('Loaded and resized overview image. [%.2fs]\n', toc(load_overview_time))
-end
+sec.img.overview_scale = params.overview_scale;
+if params.verbosity > 0; fprintf('Loaded and resized overview image. [%.2fs]\n', toc(load_overview_time)); end
 
-% Load tile images and resize them
+% Tiles
 load_tiles_time = tic;
+
 sec.img.xy_tiles = imload_section_tiles(sec.num, sec.tile_xy_scale);
+sec.img.xy_tiles_scale = params.tile_xy_scale;
+
 sec.img.z_tiles = imload_section_tiles(sec.num, sec.tile_z_scale);
+sec.img.z_tiles_scale = params.tile_z_scale;
+
 sec.img.rough_tiles = imload_section_tiles(sec.num, sec.tile_rough_scale);
-if params.verbosity > 0
-    fprintf('Loaded and resized tile images. [%.2fs]\n', toc(load_tiles_time))
-end
+sec.img.rough_tiles_scale = params.tile_rough_scale;
+
+if params.verbosity > 0; fprintf('Loaded and resized tile images. [%.2fs]\n', toc(load_tiles_time)); end
 end
 
 function params = parse_inputs(varargin)

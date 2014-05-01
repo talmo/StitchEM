@@ -40,13 +40,28 @@ Ts = mat2cell(full(T(:, 1:2)), repmat(3, length(T) / 3, 1));
 rel_tforms = [{affine2d()}; cellfun(@(t) affine2d(t), Ts, 'UniformOutput', false)];
 
 % Compose with rough tforms
-tforms = cellfun(@(t1, t2) compose_tforms(t1, t2), sec.rough_tforms, rel_tforms, 'UniformOutput', false);
+tforms = cellfun(@(t1, t2) compose_tforms(t1, t2), sec.alignments.rough.tforms, rel_tforms, 'UniformOutput', false);
 
-% Calculate residual and show average error
+% Calculate residual and average error
 res = full(D * T - F);
-fprintf('Error: %fpx / match [%.2fs]\n', rownorm2(res(:, 1:2)), toc)
+avg_error = rownorm2(res(:, 1:2));
 
+% Calculate error before alignment
+res_before = full(D - F);
+avg_error_before = rownorm2(res_before(:, 1:2));
+
+fprintf('Error: %f -> %fpx / match [%.2fs]\n', avg_error_before, avg_error, toc)
+
+% Legacy
 sec.xy_tforms = tforms;
 
+% Save to section structure
+xy.tforms = tforms;
+xy.rel_tforms = rel_tforms; % relative to rough
+xy.rel_to = 'rough';
+xy.meta.fixed_tile = fixed_tile;
+xy.meta.avg_error_before = avg_error_before;
+xy.meta.avg_error_after = avg_error;
+sec.alignments.xy = xy;
 end
 

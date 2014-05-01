@@ -89,7 +89,7 @@ else
 end
 
 % Compute convex hull of the set of points
-K = convhull(Px, Py);
+K = convhull(double(Px), double(Py));
 Vx = Px(K);
 Vy = Py(K);
 
@@ -101,11 +101,11 @@ p2 = inputParser;
 p2.KeepUnmatched = true;
 
 % Patch specifications
-p2.addOptional('PatchSpec', '?0.75', @(x) ischar(x) & ~strcmp(x, 'P_LineSpec') & ~strcmp(x, 'V_LineSpec'));
+p2.addOptional('PatchSpec', '?0.5', @(x) ischar(x) & ~strcmp(x, 'P_LineSpec') & ~strcmp(x, 'V_LineSpec'));
 
 % Line specifications
 p2.addParameter('P_LineSpec', '');
-p2.addParameter('V_LineSpec', 'rx-');
+p2.addParameter('V_LineSpec', 'k*-');
 
 % Validate and parse input
 p2.parse(other_params);

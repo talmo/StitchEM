@@ -1,5 +1,5 @@
 function tile_grid = sec_tile_grid(sec_num, varargin)
-%NUM_TILES_IN_SEC Returns a grid of tiles for the given section.
+%SEC_TILE_GRID Returns a grid of tiles for the given section.
 
 % Easy grid!
 if nargin == 0
