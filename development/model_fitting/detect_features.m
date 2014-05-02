@@ -55,7 +55,7 @@ end
 tile_features = cell(sec.num_tiles, 1);
 tforms = sec.alignments.(params.alignment).tforms;
 for t = 1:sec.num_tiles
-    % Convert overlap regions to local space coordinates
+    % Convert overlap regions to local coordinates before any alignment
     local_regions = cellfun(@(x) tforms{t}.transformPointsInverse(x), overlaps{t}, 'UniformOutput', false);
     
     % Detect features in tile
@@ -63,7 +63,7 @@ for t = 1:sec.num_tiles
         'pre_scale', pre_scale, 'detection_scale', params.detection_scale, ...
         unmatched_params);
     
-    % Find global positions
+    % Get global positions of features
     feats.global_points = tforms{t}.transformPointsForward(feats.local_points);
     
     % Save to container
@@ -73,6 +73,8 @@ end
 % Save to features structure
 features.tiles = tile_features;
 features.alignment = params.alignment;
+features.meta.wafer = sec.wafer;
+features.meta.section = sec.num;
 features.meta.tile_set = tile_set;
 features.meta.detection_scale = params.detection_scale;
 features.meta.overlaps = overlaps;

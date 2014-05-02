@@ -41,6 +41,8 @@ function varargout = minaabb(X, Y)
 %   - http://geidav.wordpress.com/2014/01/23/computing-oriented-minimum-bounding-boxes-in-2d/
 %   - http://en.wikipedia.org/wiki/Minimum_bounding_box
 %   - http://www.mathworks.com/matlabcentral/fileexchange/34767-a-suite-of-minimal-bounding-objects
+%
+% See also: sz2bb, sec_bb, ref_bb, minboundrect, minboundrect
 
 % Parse the inputs
 if nargin == 1

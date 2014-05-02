@@ -44,6 +44,7 @@ end
 sec.num = sec_num;
 sec.name = info.name;
 sec.path = info.path;
+sec.wafer = info.wafer;
 sec.num_tiles = info.num_tiles;
 sec.rows = info.rows;
 sec.cols = info.cols;
