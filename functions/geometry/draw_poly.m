@@ -19,6 +19,8 @@ function varargout = draw_poly(P, varargin)
 %   V (Nx2) or Vx, Vy (Nx1) when there are one or more outputs. V contains
 %       the vertices of the convex hull of the points P. These are the
 %       vertices of the polygon displayed.
+%
+% See also: draw_polys, plot_regions
 
 % Process inputs
 [Vx, Vy, Px, Py, params] = parse_inputs(P, varargin{:});

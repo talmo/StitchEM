@@ -54,9 +54,12 @@ end
 % Detect features in each tile
 tile_features = cell(sec.num_tiles, 1);
 tforms = sec.alignments.(params.alignment).tforms;
-parfor t = 1:sec.num_tiles
+for t = 1:sec.num_tiles
+    % Convert overlap regions to local space coordinates
+    local_regions = cellfun(@(x) tforms{t}.transformPointsInverse(x), overlaps{t}, 'UniformOutput', false);
+    
     % Detect features in tile
-    feats = detect_tile_features(tiles{t}, 'regions', overlaps, ...
+    feats = detect_surf_features(tiles{t}, 'regions', local_regions, ...
         'pre_scale', pre_scale, 'detection_scale', params.detection_scale, ...
         unmatched_params);
     

@@ -6,8 +6,7 @@ if nargin < 3
 end
 
 tile_path = get_tile_path(sec_num, tile_num, wafer_path);
-info = imfinfo(tile_path);
-sz = [info(1).Height, info(1).Width];
+sz = imsize(tile_path);
 
 end
 
