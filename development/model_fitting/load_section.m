@@ -24,12 +24,12 @@ sec.num_tiles = info.num_tiles;
 sec.rows = info.rows;
 sec.cols = info.cols;
 sec.grid = info.grid;
+sec.tile_files = info.tiles;
+sec.tile_sizes = arrayfun(@(t) get_tile_size(sec.num, t), 1:sec.num_tiles, 'UniformOutput', false)';
+sec.legacy = false;
 
 % Alignments
 sec.alignments.initial.tforms = repmat({affine2d()}, sec.num_tiles, 1);
-
-% Tile sizes
-sec.tile_sizes = arrayfun(@(t) get_tile_size(sec.num, t), 1:sec.num_tiles, 'UniformOutput', false)';
 
 %% Image Loading
 % Montage overview

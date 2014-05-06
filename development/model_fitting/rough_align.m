@@ -57,8 +57,8 @@ if any(failed_registrations)
 end
 
 % Save to section structure (legacy)
-sec.rough_tforms = rough_alignments;
-sec.grid_aligned = failed_registrations;
+%sec.rough_tforms = rough_alignments;
+%sec.grid_aligned = failed_registrations;
 
 % Save to section structure
 rough.tforms = rough_alignments;
