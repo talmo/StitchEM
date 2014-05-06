@@ -26,7 +26,7 @@ y_nudge = (num_rows * YRes - diff(YLims_out)) / 2;
 
 % Apply adjustment to limits of output
 XLims_out = XLims_out + [-x_nudge x_nudge];
-YLims_out = YLims_out + [-y_nudge y_nuge];
+YLims_out = YLims_out + [-y_nudge y_nudge];
 
 % Return output bounding box
 bb_out = lims2bb(XLims_out, YLims_out);
