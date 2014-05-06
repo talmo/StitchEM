@@ -25,7 +25,7 @@ function features = detect_surf_features(img, varargin)
 
 % Default to whole image if no region specified
 if isempty(params.regions)
-    params.regions = {sz2bb(size(img) * params.detection_scale / params.pre_scale)};
+    params.regions = {sz2bb(size(img) / params.pre_scale)};
 end
 num_regions = numel(params.regions);
 
@@ -72,7 +72,7 @@ for i = 1:num_regions
 end
 
 % Create region column
-region = arrayfun(@(x) repmat(x, height(local_points{x}), 1), 1:num_regions, 'UniformOutput', false)';
+region = arrayfun(@(x) repmat(x, length(local_points{x}), 1), 1:num_regions, 'UniformOutput', false)';
 
 % Merge into table
 features = table(cell2mat(local_points), cell2mat(descriptors), cell2mat(region), ...
