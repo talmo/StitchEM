@@ -5,8 +5,8 @@ scales = {'full', 1.0, 'half', 0.5, 'rough', 0.07 * 0.78};
 
 %% Initialize
 % Load sections
-secA = load_section(A, 'from_cache', false, 'legacy', false, 'scales', scales);
-secB = load_section(B, 'from_cache', false, 'legacy', false, 'scales', scales);
+secA = load_section(A, 'scales', scales);
+secB = load_section(B, 'scales', scales);
 
 % Register overview of section B to A
 secB.overview.alignment = align_overviews(secA, secB);

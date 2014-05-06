@@ -1,5 +1,7 @@
 function sec = load_section(sec_num, varargin)
 %LOAD_SECTION Loads a section and its images based on section number.
+% Usage:
+%   sec = load_section(sec_num)
 
 %% Parse inputs
 params = parse_inputs(varargin{:});
@@ -74,11 +76,6 @@ p.addParameter('legacy', true);
 % Validate and parse input
 p.parse(varargin{:});
 params = p.Results;
-
-% Calculate tile rough scaling if needed (legacy)
-if strcmp(params.tile_rough_scale, 'auto')
-    params.tile_rough_scale = params.overview_scale * params.tile_rough_rel_scale;
-end
 
 % Default scaling if empty
 if isempty(params.scales)

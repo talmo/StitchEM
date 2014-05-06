@@ -1,5 +1,7 @@
 function overview_alignment = align_overviews(secA, secB, varargin)
 %ALIGN_OVERVIEWS Aligns the overview of one section to another (secB to secA).
+% Usage:
+%   secB.overview.alignment = align_overviews(secA, secB)
 
 registration_time = tic;
 %% Register overviews

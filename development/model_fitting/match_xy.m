@@ -1,5 +1,7 @@
 function matches = match_xy(sec, varargin)
 %MATCH_XY Finds XY matches within a section.
+% Usage:
+%   sec.xy_matches = match_xy(sec)
 
 % Process parameters
 [params, unmatched_params] = parse_input(sec, varargin{:});
@@ -16,7 +18,7 @@ for tA = 1:sec.num_tiles - 1
         
         % Skip if either set is empty
         if isempty(featsA) || isempty(featsB)
-            continue;
+            continue
         end
         
         % Match using Nearest-Neighbor Ratio

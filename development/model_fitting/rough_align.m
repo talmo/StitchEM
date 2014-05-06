@@ -1,5 +1,7 @@
 function sec = rough_align(sec, varargin)
 %ROUGH_ALIGN Does a rough alignment on the section based on registration to its overview.
+% Usage:
+%   sec.alignments.rough = rough_align(sec)
 
 % Parse inputs
 [params, unmatched_params] = parse_input(varargin{:});
