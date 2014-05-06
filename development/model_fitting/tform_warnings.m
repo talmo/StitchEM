@@ -1,4 +1,4 @@
-function cur_state = tform_warnings(state)
+function varargout = tform_warnings(state)
 %TFORM_WARNINGS Turns warnings about bad transformations on or off.
 
 % Warnings
@@ -25,15 +25,16 @@ end
 
 % Change the state of each warning
 for w = warnings(:)'
-    warning(warning_state, w)
+    warning(warning_state, w{1})
     
     % Parallel
     if matlabpool('size')
-        pctRunOnAll(['warning(''' warning_state ''', ''' w ''')'])
+        pctRunOnAll(['warning(''' warning_state ''', ''' w{1} ''')'])
     end
 end
 
-cur_state = warning_state;
-
+if nargout > 0
+    varargout = {warning_state};
+end
 end
 
