@@ -23,6 +23,7 @@ verbosity = params.verbosity;
 % Estimate alignments
 rough_alignments = cell(sec.num_tiles, 1);
 tforms = cell(sec.num_tiles, 1);
+tform_warnings('off');
 parfor tile_num = 1:sec.num_tiles
     registration_time = tic;
     try
@@ -55,6 +56,7 @@ if any(failed_registrations)
         fprintf('Aligned tiles to grid: %s\n', failed_str)
     end
 end
+tform_warnings('on');
 
 % Save to section structure (legacy)
 %sec.rough_tforms = rough_alignments;
