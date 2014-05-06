@@ -8,25 +8,10 @@ function features = detect_features(sec, varargin)
 % Process parameters
 [params, unmatched_params] = parse_input(sec, varargin{:});
 
-% Find closest tile images to detection scale
-tile_set = '';
-F = fieldnames(sec.img);
-for f = F(~cellfun('isempty', regexp(F, '_tiles$')))'
-    f = f{1};
-    scale = sec.img.([f '_scale']);
-    if scale >= params.detection_scale
-        if isempty(tile_set)
-            tile_set = f;
-        elseif scale <= sec.img.([tile_set '_scale'])
-            tile_set = f;
-        end
-    end
-end
-if isempty(tile_set)
-    error('Could not find any tile sets with resolution greater than or equal to detection scale.')
-end
-tiles = sec.img.(tile_set);
-pre_scale = sec.img.([tile_set '_scale']);
+% Get best tile images
+tile_set = closest_tileset(sec, params.detection_scale);
+tiles = sec.tiles.(tile_set).img;
+pre_scale = sec.tiles.(tile_set).scale;
 
 % Find overlap regions to detect features in
 bounding_boxes = sec_bb(sec, params.alignment);
