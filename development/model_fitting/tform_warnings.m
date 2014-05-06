@@ -25,11 +25,11 @@ end
 
 % Change the state of each warning
 for w = warnings(:)'
-    warning(warning_state, 'MATLAB:nearlySingularMatrix')
+    warning(warning_state, w)
     
     % Parallel
     if matlabpool('size')
-        pctRunOnAll sprintf(warning('off', 'MATLAB:nearlySingularMatrix')
+        pctRunOnAll(['warning(''' warning_state ''', ''' w ''')'])
     end
 end
 
