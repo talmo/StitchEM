@@ -19,7 +19,7 @@ if nargin < 1
         warning_state = 'on';
     end
 else
-    validatestring(state, {'on', 'off'})
+    state = validatestring(state, {'on', 'off'});
     warning_state = state;
 end
 

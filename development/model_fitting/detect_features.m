@@ -8,10 +8,15 @@ function features = detect_features(sec, varargin)
 % Process parameters
 [params, unmatched_params] = parse_input(sec, varargin{:});
 
+total_time = tic;
+if params.verbosity > 0; fprintf('== Detecting features in section %d.\n', sec.num); end
+tform_warnings('off')
+
 % Get best tile images
 tile_set = closest_tileset(sec, params.detection_scale);
 tiles = sec.tiles.(tile_set).img;
 pre_scale = sec.tiles.(tile_set).scale;
+if params.verbosity > 1; fprintf('Tile set: %s\n', tile_set); end
 
 % Find overlap regions to detect features in
 bounding_boxes = sec_bb(sec, params.alignment);
@@ -70,6 +75,9 @@ features.meta.overlaps = overlaps;
 features.meta.min_overlap_area = params.min_overlap_area;
 features.meta.unmatched_params = unmatched_params;
 
+if params.verbosity > 0; fprintf('Finished detecting features. [%.2fs]', toc(total_time)); end
+
+tform_warnings('on')
 end
 
 function [params, unmatched] = parse_input(sec, varargin)
