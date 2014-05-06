@@ -6,10 +6,12 @@ function matches = match_z(secA, secB)
 % Process parameters
 [params, unmatched_params] = parse_input(sec, varargin{:});
 
+% Find matches between pairs of tiles
 match_sets = {};
 match_idx = cell(secA.num_tiles, secB.num_tiles);
 for tA = 1:secA.num_tiles
     for tB = 1:secB.num_tiles
+        
     end
 end
 

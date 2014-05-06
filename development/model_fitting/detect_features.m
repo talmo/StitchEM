@@ -78,11 +78,11 @@ function [params, unmatched] = parse_input(sec, varargin)
 p = inputParser;
 p.KeepUnmatched = true;
 
-% Alignment (to get to global)
+% Alignment
 alignments = fieldnames(sec.alignments);
 p.addParameter('alignment', alignments{end}, @(x) iscell(x) || (ischar(x) && validatestr(x, alignments)));
 
-% Regions (in global coordinates)
+% Regions
 p.addParameter('regions', {});
 p.addParameter('min_overlap_area', 0.05);
 

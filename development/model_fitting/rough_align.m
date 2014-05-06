@@ -1,4 +1,4 @@
-function sec = rough_align(sec, varargin)
+function alignment = rough_align(sec, varargin)
 %ROUGH_ALIGN Does a rough alignment on the section based on registration to its overview.
 % Usage:
 %   sec.alignments.rough = rough_align(sec)
@@ -61,17 +61,16 @@ end
 %sec.grid_aligned = failed_registrations;
 
 % Save to section structure
-rough.tforms = rough_alignments;
-rough.rel_tforms = rough_alignments;
-rough.rel_to = 'initial';
-rough.meta.intermediate_tforms = tforms;
-rough.meta.tile_scale = tile_prescale;
-rough.meta.overview_tform = overview_tform;
-rough.meta.overview_scale = overview_prescale;
-rough.meta.overview_rel_to_sec = sec.overview.alignment.rel_to_sec;
-rough.meta.grid_aligned = failed_registrations;
-rough.meta.assumed_overlap = 0.1;
-sec.alignments.rough = rough;
+alignment.tforms = rough_alignments;
+alignment.rel_tforms = rough_alignments;
+alignment.rel_to = 'initial';
+alignment.meta.intermediate_tforms = tforms;
+alignment.meta.tile_scale = tile_prescale;
+alignment.meta.overview_tform = overview_tform;
+alignment.meta.overview_scale = overview_prescale;
+alignment.meta.overview_rel_to_sec = sec.overview.alignment.rel_to_sec;
+alignment.meta.grid_aligned = failed_registrations;
+alignment.meta.assumed_overlap = 0.1;
 
 if params.verbosity > 0
     fprintf('Registered %d/%d tiles to overview. [%.2fs]\n', length(successful_registrations), sec.num_tiles, toc(total_time))
