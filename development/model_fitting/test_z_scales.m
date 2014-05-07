@@ -30,16 +30,18 @@ secA.alignments.xy = align_xy(secA);
 secB.alignments.xy = align_xy(secB);
 
 %% Z Alignment
-z_scale = 0.125;
-z_SURF.MetricThreshold = 1000; % default = 1000
+z_scale = 0.25;
+z_SURF.MetricThreshold = 5000; % default = 1000
 z_SURF.NumOctaves = 3; % default = 3
 z_SURF.NumScaleLevels = 4; % default = 4
+z_NNR.MatchThreshold = 1.0; % default = 1.0
+z_NNR.MaxRatio = 0.6; % default = 0.6
 
 % Detect features at particular scale
 secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'xy'), 'detection_scale', z_scale, z_SURF);
 secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'xy'), 'detection_scale', z_scale, z_SURF);
 
 % Match features
-z_matches = match_z(secA, secB);
+z_matches = match_z(secA, secB, z_NNR);
 
 %% Evaluate results

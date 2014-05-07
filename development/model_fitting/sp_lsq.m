@@ -28,7 +28,7 @@ Ts = mat2cell(full(T(:, 1:2)), repmat(3, length(T) / 3, 1));
 rel_tforms = [{affine2d()}; cellfun(@(t) affine2d(t), Ts, 'UniformOutput', false)];
 
 % Calculate error before alignment
-res_prior = full(D - F);
+res_prior = full(D * repmat(eye(3), length(T) / 3, 1) - F);
 avg_prior_error = rownorm2(res_prior(:, 1:2));
 
 % Calculate residual and average error

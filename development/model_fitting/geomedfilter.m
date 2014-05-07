@@ -10,7 +10,7 @@ function [inliers, outliers] = geomedfilter(displacements, varargin)
 M = geomedian(displacements);
 
 % Calculate the distance of each point from the geometric median
-distances = rownorm2(bsxadd(displacements, -M));
+[~, distances] = rownorm2(bsxadd(displacements, -M));
 
 % Filter outliers
 switch params.filter

@@ -22,7 +22,7 @@ if params.verbosity > 1; fprintf('Tile set: %s\n', tile_set); end
 
 % Find overlap regions to detect features in
 bounding_boxes = sec_bb(sec, params.alignment);
-if instr(params.regions, {'self', 'xy'})
+if ischar(params.regions) && instr(params.regions, {'self', 'xy'})
     % Self intersection
     [I, idx] = intersect_poly_sets(bounding_boxes);
     overlaps = arrayfun(@(t) I([idx{t, :}]), 1:sec.num_tiles, 'UniformOutput', false)';
@@ -54,6 +54,7 @@ end
 % Detect features in each tile
 tile_features = cell(sec.num_tiles, 1);
 tforms = sec.alignments.(params.alignment).tforms;
+num_features = 0;
 parfor t = 1:sec.num_tiles
     % Transform overlap regions to the local coordinate system of the tile
     local_regions = cellfun(@(x) tforms{t}.transformPointsInverse(x), overlaps{t}, 'UniformOutput', false);
@@ -68,6 +69,7 @@ parfor t = 1:sec.num_tiles
     
     % Save to container
     tile_features{t} = feats;
+    num_features = num_features + height(feats);
 end
 
 % Save to features structure
@@ -81,8 +83,9 @@ features.meta.overlaps = overlaps;
 features.meta.overlap_with = overlap_with;
 features.meta.min_overlap_area = params.min_overlap_area;
 features.meta.unmatched_params = unmatched_params;
+features.meta.num_features = num_features;
 
-if params.verbosity > 0; fprintf('Finished detecting features. [%.2fs]\n', toc(total_time)); end
+if params.verbosity > 0; fprintf('Found %d features. [%.2fs]\n', num_features, toc(total_time)); end
 
 tform_warnings('on')
 end
