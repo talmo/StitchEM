@@ -36,6 +36,7 @@ if params.verbosity > 0; fprintf('Detecting SURF features in %d regions at %sx s
 if params.pre_scale ~= params.detection_scale
     img = imresize(img, params.detection_scale / params.pre_scale);
 end
+sz = size(img);
 
 % Initialize containers
 local_points = cell(numel(params.regions), 1);
@@ -46,11 +47,14 @@ for i = 1:num_regions
     % Scale region to detection scale
     region = params.regions{i} * params.detection_scale;
     
-    % Convert region coordinates to image indices
-    idx = regionToIndices(region, size(img));
+    % Find limits of the axis-aligned bounding box of the region
+    [XLims, YLims] = bb2lims(region);
     
-    % Extract image region
-    img_region = img(idx);
+    % Convert intrinsic limits to subscripts
+    [I, J] = intrinsicToSubscripts(XLims, YLims, sz);
+    
+    % Extract region from image
+    img_region = img(I(1):I(2), J(1):J(2));
     
     % Get interest points
     interest_points = detectSURFFeatures(img_region, unmatched_params);
@@ -62,7 +66,7 @@ for i = 1:num_regions
     local_points{i} = valid_points(:).Location;
     
     % Adjust for location of region
-    region_offset = bsxadd(intrinsicToSubscripts(min(region), size(img)), -[1, 1]);
+    region_offset = [J(1), I(1)] - [1, 1];
     local_points{i} = bsxadd(local_points{i}, region_offset);
     
     % Adjust for detection scale

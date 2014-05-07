@@ -24,13 +24,16 @@ if instr(params.regions, {'self', 'xy'})
     % Self intersection
     [I, idx] = intersect_poly_sets(bounding_boxes);
     overlaps = arrayfun(@(t) I([idx{t, :}]), 1:sec.num_tiles, 'UniformOutput', false)';
+    overlap_with = arrayfun(@(t) find(~areempty(idx(t, :))), 1:sec.num_tiles, 'UniformOutput', false)';
 elseif ~isempty(params.regions)
     % Intersect with specified regions
     [I, idx] = intersect_poly_sets(bounding_boxes, params.regions);
     overlaps = arrayfun(@(t) I([idx{t, :}]), 1:sec.num_tiles, 'UniformOutput', false)';
+    overlap_with = arrayfun(@(t) find(~areempty(idx(t, :))), 1:sec.num_tiles, 'UniformOutput', false)';
 else
     % Whole tiles
     overlaps = bounding_boxes;
+    overlap_with = num2cell(1:sec.num_tiles)';
 end
 
 % Eliminate overlaps that are less than the minimum area
@@ -49,7 +52,7 @@ end
 tile_features = cell(sec.num_tiles, 1);
 tforms = sec.alignments.(params.alignment).tforms;
 for t = 1:sec.num_tiles
-    % Convert overlap regions to local coordinates before any alignment
+    % Transform overlap regions to the local coordinate system of the tile
     local_regions = cellfun(@(x) tforms{t}.transformPointsInverse(x), overlaps{t}, 'UniformOutput', false);
     
     % Detect features in tile
@@ -72,6 +75,7 @@ features.meta.section = sec.num;
 features.meta.tile_set = tile_set;
 features.meta.detection_scale = params.detection_scale;
 features.meta.overlaps = overlaps;
+features.meta.overlap_with = overlap_with;
 features.meta.min_overlap_area = params.min_overlap_area;
 features.meta.unmatched_params = unmatched_params;
 
