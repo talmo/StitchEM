@@ -44,8 +44,8 @@ for tA = 1:sec.num_tiles - 1
         end
         
         % Get table data from matched indices
-        match_set.A = featsA(match_sets.A, params.keep_cols);
-        match_set.B = featsA(match_sets.B, params.keep_cols);
+        match_set.A = featsA(match_set.A, params.keep_cols);
+        match_set.B = featsA(match_set.B, params.keep_cols);
         match_set.num_matches = height(match_set.A);
         
         % Save matches
@@ -84,6 +84,6 @@ p.addParameter('verbosity', 1);
 p.parse(varargin{:});
 params = p.Results;
 unmatched = p.Unmatched;
-params.feature_set = validatestr(params.feature_set, feature_sets);
+params.feature_set = validatestring(params.feature_set, feature_sets);
 
 end
