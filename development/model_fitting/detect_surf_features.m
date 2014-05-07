@@ -14,11 +14,9 @@ function features = detect_surf_features(img, varargin)
 %       automatically resized.
 %   'verbosity', 1: Controls how much to output to the console.
 %
-% Also accepts Name, Value parameters for:
-%   detectSURFFeatures
-%   extractFeatures
+% Also accepts Name, Value parameters for detectSURFFeatures
 %
-% See also: detect_features, detectSURFFeatures, extractFeatures
+% See also: detect_features, detectSURFFeatures
 
 % Parse inputs
 [params, unmatched_params] = parse_input(varargin{:});
@@ -60,7 +58,7 @@ for i = 1:num_regions
     interest_points = detectSURFFeatures(img_region, unmatched_params);
 
     % Extract descriptors from valid interest points
-    [descriptors{i}, valid_points] = extractFeatures(img_region, interest_points, unmatched_params);
+    [descriptors{i}, valid_points] = extractFeatures(img_region, interest_points);
     
     % Extract point locations
     local_points{i} = valid_points(:).Location;

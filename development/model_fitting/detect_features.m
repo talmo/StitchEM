@@ -4,6 +4,8 @@ function features = detect_features(sec, varargin)
 %   sec.features.whole_tiles = detect_features(sec)
 %   sec.features.xy = detect_features(sec, 'regions', 'xy')
 %   sec.features.z = detect_features(sec, 'regions', z_overlaps, 'detection_scale', z_scale)
+%
+% See also: detect_surf_features
 
 % Process parameters
 [params, unmatched_params] = parse_input(sec, varargin{:});
