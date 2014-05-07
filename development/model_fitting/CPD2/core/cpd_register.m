@@ -90,6 +90,7 @@ if ~isfield(opt,'normalize') || isempty(opt.normalize), opt.normalize = 1; end;
 if ~isfield(opt,'max_it') || isempty(opt.max_it), opt.max_it = 150; end;
 if ~isfield(opt,'tol') || isempty(opt.tol), opt.tol = 1e-5; end;
 if ~isfield(opt,'viz') || isempty(opt.viz), opt.viz = 1; end;
+if ~isfield(opt,'savegif') || isempty(opt.savegif), opt.savegif = false; end;
 if ~isfield(opt,'corresp') || isempty(opt.corresp), opt.corresp = 0; end;
 if ~isfield(opt,'outliers') || isempty(opt.outliers), opt.outliers = 0.1; end;
 if ~isfield(opt,'fgt') || isempty(opt.fgt), opt.fgt = 0; end;
@@ -139,7 +140,7 @@ switch lower(opt.method),
     case 'rigid'
         [C, R, t, s, sigma2, iter, T]=cpd_rigid(X,Y, opt.rot, opt.scale, opt.max_it, opt.tol, opt.viz, opt.outliers, opt.fgt, opt.corresp, opt.sigma2);
        case 'affine'
-        [C, R, t, sigma2, iter, T]=cpd_affine(X,Y, opt.max_it, opt.tol, opt.viz, opt.outliers, opt.fgt, opt.corresp, opt.sigma2); s=1;
+        [C, R, t, sigma2, iter, T]=cpd_affine(X,Y, opt.max_it, opt.tol, opt.viz, opt.outliers, opt.fgt, opt.corresp, opt.sigma2, opt.savegif); s=1;
     case 'nonrigid'
         [C, W, sigma2, iter, T] =cpd_GRBF(X, Y, opt.beta, opt.lambda, opt.max_it, opt.tol, opt.viz, opt.outliers, opt.fgt, opt.corresp, opt.sigma2);    
     case 'nonrigid_lowrank'

@@ -83,6 +83,45 @@ for tA = 1:secA.num_tiles
     end
 end
 
+% Second pass of filtering
+if params.filter_secondpass
+    % Reset global match counter
+    num_matches = 0;
+    
+    % Combine all matches
+    all_matches.A = cell2mat(cellfun(@(m) m.A.global_points, match_sets, 'UniformOutput', false));
+    all_matches.B = cell2mat(cellfun(@(m) m.B.global_points, match_sets, 'UniformOutput', false));
+    
+    % Calculate displacements
+    all_displacements = all_matches.B - all_matches.A;
+    
+    % Get the global geometric median of displacements
+    global_median = geomedian(all_displacements);
+    
+    % Compute global threshold
+    [~, all_distances] = rownorm2(bsxadd(all_displacements, -global_median));
+    global_thresh = median(all_distances) * 3;
+    
+    % Re-filter match sets
+    for i = 1:length(match_sets)
+        displacements = match_sets{i}.B.global_points - match_sets{i}.A.global_points;
+        [inliers, outliers] = geomedfilter(displacements, global_median, 'threshold', global_thresh);
+        
+        % Update inliers
+        match_sets{i}.A = match_sets{i}.A(inliers, :);
+        match_sets{i}.B = match_sets{i}.B(inliers, :);
+        match_sets{i}.metric = match_sets{i}.metric(inliers);
+        
+        % Metadata
+        match_sets{i}.meta.num_inliers = length(inliers);
+        match_sets{i}.meta.num_outliers = match_sets{i}.meta.num_outliers + length(outliers);
+        
+        % Update match counters
+        match_sets{i}.num_matches = length(inliers);
+        num_matches = num_matches + length(inliers);
+    end
+end
+
 % Save to output structure
 matches.match_sets = match_sets;
 matches.tile_idx = match_idx;
@@ -107,6 +146,7 @@ p.addParameter('feature_set', 'z');
 
 % Filter outliers
 p.addParameter('filter_outliers', true);
+p.addParameter('filter_secondpass', true);
 
 % Columns to keep for the matched features
 p.addParameter('keep_cols', {'local_points', 'global_points'});

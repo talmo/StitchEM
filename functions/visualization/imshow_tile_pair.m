@@ -25,8 +25,8 @@ if params.pre_scale ~= params.display_scale
 end
 if params.display_scale ~= 1.0
     % Scale transforms to display resolution
-    tform_prescale = scale_tform(1 / params.display_scale); % scale to full resolution assuming we start at display resolution
-    tform_rescale = scale_tform(params.display_scale); % scale back down to display resolution
+    tform_prescale = make_tform('s', 1 / params.display_scale); % scale to full resolution assuming we start at display resolution
+    tform_rescale = make_tform('s', params.display_scale); % scale back down to display resolution
     tformA = affine2d(tform_prescale.T * tformA.T * tform_rescale.T);
     tformB = affine2d(tform_prescale.T * tformB.T * tform_rescale.T);
 end

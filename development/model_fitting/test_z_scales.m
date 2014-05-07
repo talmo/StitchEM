@@ -1,39 +1,13 @@
 % This script evaluates the performance of Z matching using features detected at different scales.
-A = 103;
-B = 104;
-scales = {'full', 1.0, 'half', 0.5, 'rough', 0.07 * 0.78};
-
-%% Initialize and XY align
-xy_SURF.MetricThreshold = 11000;
-
-% Load sections
-secA = load_section(A, 'scales', scales);
-secB = load_section(B, 'scales', scales);
-
-% Register overview of section B to A
-secB.overview.alignment = align_overviews(secA, secB);
-
-% Rough alignment
-secA.alignments.rough = rough_align(secA);
-secB.alignments.rough = rough_align(secB);
-
-% Detect XY features
-secA.features.xy = detect_features(secA, 'regions', 'xy', xy_SURF);
-secB.features.xy = detect_features(secB, 'regions', 'xy', xy_SURF);
-
-% Match XY features
-secA.xy_matches = match_xy(secA);
-secB.xy_matches = match_xy(secB);
-
-% Align XY
-secA.alignments.xy = align_xy(secA);
-secB.alignments.xy = align_xy(secB);
+% Note: Run initialize_xy first
+secA = clear_tileset(secA, 'full');
+secB = clear_tileset(secB, 'full');
 
 %% Z Alignment
-z_scale = 0.25;
-z_SURF.MetricThreshold = 5000; % default = 1000
+z_scale = 0.50;
+z_SURF.MetricThreshold = 12000; % default = 1000
 z_SURF.NumOctaves = 3; % default = 3
-z_SURF.NumScaleLevels = 4; % default = 4
+z_SURF.NumScaleLevels = 10; % default = 4
 z_NNR.MatchThreshold = 1.0; % default = 1.0
 z_NNR.MaxRatio = 0.6; % default = 0.6
 
@@ -44,4 +18,23 @@ secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'xy'), 'detectio
 % Match features
 z_matches = match_z(secA, secB, z_NNR);
 
-%% Evaluate results
+%% Match statistics
+M = merge_match_sets(z_matches);
+displacements = M.B.global_points - M.A.global_points;
+global_median = geomedian(displacements);
+[~, distances] = rownorm2(bsxadd(displacements, -global_median));
+
+%% Visualize
+% Plot sections and matches
+plot_section(secA, 'xy')
+plot_section(secB, 'xy')
+plot_matches(M.A, M.B);
+title(sprintf('Section %d <-> %d | Alignment: xy | n = %d matches | Detection scale = %sx', secA.num, secB.num, z_matches.num_matches, num2str(z_scale)))
+
+%% Solve using least squares
+[secA.alignments.z, secB.alignments.z] = align_z_pair(secA, secB, z_matches);
+plot_section(secA, 'z')
+plot_section(secB, 'z')
+
+%% Solve using CPD
+cpd_solve(z_matches)

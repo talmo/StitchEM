@@ -70,6 +70,7 @@ matches.match_sets = match_sets;
 matches.tile_idx = match_idx;
 matches.feature_set = params.feature_set;
 matches.num_matches = num_matches;
+matches.sec = sec.num;
 
 if params.verbosity > 0; fprintf('Found %d matches. [%.2fs]\n', num_matches, toc(total_time)); end
 

@@ -6,7 +6,7 @@ function M = geomedian(X, Y, tol)
 %
 % Args:
 %   X and Y must be vectors of X and Y coordinates.
-%   XY can be a 2xM or Mx2 matrix of XY coordinates.
+%   XY can be a 2xM of XY coordinates.
 %   tol is the tolerance for the Simulated Annealing algorithm, default is
 %       set to eps.
 %
@@ -15,13 +15,8 @@ function M = geomedian(X, Y, tol)
 
 % Split XY matrix into X and Y vectors
 if nargin < 2
-    if size(X, 1) >= size(X, 2) % X is tall
-        Y = X(:, 2);
-        X = X(:, 1);
-    else % X is wide
-        Y = X(2, :);
-        X = X(1, :);
-    end
+    Y = X(:, 2);
+    X = X(:, 1);
 end
 
 if nargin < 3
