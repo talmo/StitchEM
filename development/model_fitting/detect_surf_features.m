@@ -99,7 +99,7 @@ p.addParameter('pre_scale', 1.0);
 p.addParameter('detection_scale', 1.0);
 
 % Verbosity
-p.addParameter('verbosity', 1);
+p.addParameter('verbosity', 0);
 
 % Validate and parse input
 p.parse(varargin{:});
