@@ -48,12 +48,13 @@ for t = 1:sec.num_tiles
     
     % Save back to overlaps
     overlaps{t} = overlaps{t}(valid_overlaps);
+    overlap_with{t} = overlap_with{t}(valid_overlaps);
 end
 
 % Detect features in each tile
 tile_features = cell(sec.num_tiles, 1);
 tforms = sec.alignments.(params.alignment).tforms;
-for t = 1:sec.num_tiles
+parfor t = 1:sec.num_tiles
     % Transform overlap regions to the local coordinate system of the tile
     local_regions = cellfun(@(x) tforms{t}.transformPointsInverse(x), overlaps{t}, 'UniformOutput', false);
     
@@ -81,7 +82,7 @@ features.meta.overlap_with = overlap_with;
 features.meta.min_overlap_area = params.min_overlap_area;
 features.meta.unmatched_params = unmatched_params;
 
-if params.verbosity > 0; fprintf('Finished detecting features. [%.2fs]', toc(total_time)); end
+if params.verbosity > 0; fprintf('Finished detecting features. [%.2fs]\n', toc(total_time)); end
 
 tform_warnings('on')
 end

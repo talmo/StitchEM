@@ -1,5 +1,7 @@
 function [inliers, outliers] = geomedfilter(displacements, varargin)
 %GEOMEDFILTER Filters a set of point displacements based on their distance from the geometric median.
+% Usage:
+%   [inliers, outliers] = geomedfilter(displacements)
 
 % Process parameters
 [params, unmatched_params] = parse_input(varargin{:});
@@ -7,7 +9,7 @@ function [inliers, outliers] = geomedfilter(displacements, varargin)
 % Calculate the geometric median
 M = geomedian(displacements);
 
-% Calculate the distance of each point to the geometric median
+% Calculate the distance of each point from the geometric median
 distances = rownorm2(bsxadd(displacements, -M));
 
 % Filter outliers

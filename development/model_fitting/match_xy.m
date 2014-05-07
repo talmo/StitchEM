@@ -11,15 +11,24 @@ features = sec.features.(params.feature_set);
 match_sets = {};
 match_idx = cell(sec.num_tiles);
 for tA = 1:sec.num_tiles - 1
+    % Get tile A features
+    tileA_features = features.tiles{tA};
     for tB = tA + 1:sec.num_tiles
-        % Get putatively matching feature sets
-        featsA = features.tiles{tA};
-        featsB = features.tiles{tB};
+        % Look for overlap region between the tiles
+        overlap_regionA = find(features.meta.overlap_with{tA} == tB, 1);
+        overlap_regionB = find(features.meta.overlap_with{tB} == tA, 1);
         
-        % Skip if either set is empty
-        if isempty(featsA) || isempty(featsB)
+        % Skip this tile pair if they do not overlap
+        if isempty(overlap_regionA) || isempty(overlap_regionB)
             continue
         end
+        
+        % Get tile B features
+        tileB_features = features.tiles{tB};
+        
+        % Get only the features in the overlap regions
+        featsA = tileA_features(tileA_features.region == overlap_regionA, :);
+        featsB = tileB_features(tileB_features.region == overlap_regionB, :);
         
         % Match using Nearest-Neighbor Ratio
         match_set = nnr_match(featsA, featsB, unmatched_params);
@@ -34,6 +43,11 @@ for tA = 1:sec.num_tiles - 1
             match_set.B = match_set.B(inliers);
         end
         
+        % Get table data from matched indices
+        match_set.A = featsA(match_sets.A, params.keep_cols);
+        match_set.B = featsA(match_sets.B, params.keep_cols);
+        match_set.num_matches = height(match_set.A);
+        
         % Save matches
         match_sets{end + 1} = match_set;
         match_idx{tA, tB} = length(match_sets);
@@ -44,6 +58,7 @@ end
 % Save to output structure
 matches.match_sets = match_sets;
 matches.tile_idx = match_idx;
+matches.feature_set = params.feature_set;
 end
 
 function [params, unmatched] = parse_input(sec, varargin)
@@ -56,6 +71,12 @@ p.KeepUnmatched = true;
 feature_sets = fieldnames(sec.features);
 p.addParameter('feature_set', 'xy', @(x) validatestring(x, feature_sets));
 
+% Filter outliers
+p.addParameter('filter_outliers', true);
+
+% Columns to keep for the matched features
+p.addParameter('keep_cols', {'local_points', 'global_points'});
+
 % Verbosity
 p.addParameter('verbosity', 1);
 
@@ -63,5 +84,6 @@ p.addParameter('verbosity', 1);
 p.parse(varargin{:});
 params = p.Results;
 unmatched = p.Unmatched;
+params.feature_set = validatestr(params.feature_set, feature_sets);
 
 end
