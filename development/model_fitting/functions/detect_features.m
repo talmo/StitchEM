@@ -11,14 +11,14 @@ function features = detect_features(sec, varargin)
 [params, unmatched_params] = parse_input(sec, varargin{:});
 
 total_time = tic;
-if params.verbosity > 0; fprintf('== Detecting features in section %d.\n', sec.num); end
+if params.verbosity > 0; fprintf('== Detecting features in section %d at %sx scale.\n', sec.num, num2str(params.detection_scale)); end
 tform_warnings('off')
 
 % Get best tile images
 tile_set = closest_tileset(sec, params.detection_scale);
 tiles = sec.tiles.(tile_set).img;
 pre_scale = sec.tiles.(tile_set).scale;
-if params.verbosity > 1; fprintf('Tile set: %s\n', tile_set); end
+if params.verbosity > 0; fprintf('Using tile set ''%s'' with base alignment ''%s''.\n', tile_set,  params.alignment); end
 
 % Find overlap regions to detect features in
 bounding_boxes = sec_bb(sec, params.alignment);

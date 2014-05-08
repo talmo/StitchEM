@@ -3,7 +3,7 @@ function sec = clear_tileset(sec, tile_set)
 % Usage:
 %   sec = clear_tileset(sec, tile_set)
 
-sec = rmfield(sec.tiles, tile_set);
+sec.tiles = rmfield(sec.tiles, tile_set);
 
 end
 

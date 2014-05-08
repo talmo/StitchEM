@@ -53,7 +53,7 @@
 %     along with CPD package; if not, write to the Free Software
 %     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-function [C, B, t, sigma2, iter, T]=cpd_affine(X,Y, max_it, tol, viz, outliers, fgt, corresp, sigma2, savegif)
+function [C, B, t, sigma2, iter, T]=cpd_affine(X,Y, max_it, tol, viz, outliers, fgt, corresp, sigma2, savegif, verbosity)
 
 [N, D]=size(X);[M, D]=size(Y);
 
@@ -79,7 +79,7 @@ while (iter<max_it) && (ntol > tol) && (sigma2 > 10*eps)
     end
     
     ntol=abs((L-L_old)/L);
-    disp([' CPD Affine ' st ' : dL= ' num2str(ntol) ', iter= ' num2str(iter) ' sigma2= ' num2str(sigma2)]);
+    if verbosity > 0; disp([' CPD Affine ' st ' : dL= ' num2str(ntol) ', iter= ' num2str(iter) ' sigma2= ' num2str(sigma2)]); end
   
     % Precompute 
     Np=sum(P1);
@@ -113,7 +113,7 @@ while (iter<max_it) && (ntol > tol) && (sigma2 > 10*eps)
         if iter == 1
             pos = get(gcf, 'Position');
             width = pos(3); height = pos(4);
-            mov = zeros(height, width, 1, length(T), 'uint8');
+            mov = zeros(height, width, 1, max_it, 'uint8');
             [mov(:,:,1,iter), map] = rgb2ind(f.cdata, 256, 'nodither');
         else
             mov(:,:,1,iter) = rgb2ind(f.cdata, map, 'nodither');
@@ -122,6 +122,7 @@ while (iter<max_it) && (ntol > tol) && (sigma2 > 10*eps)
 end
 
 if savegif
+    mov = mov(:,:,:,1:iter);
     % Save to gif
     imwrite(mov, map, 'animation.gif', 'DelayTime', 0, 'LoopCount', inf);
 end

@@ -47,6 +47,7 @@ alignmentB.rel_to = 'xy';
 alignmentB.meta.fixed_tile = params.fixed_tile;
 alignmentB.meta.avg_prior_error = avg_prior_error;
 alignmentB.meta.avg_post_error = avg_post_error;
+alignmentB.meta.method = mfilename;
 
 
 if params.verbosity > 0; fprintf('Error: %f -> %fpx / match (%d matches) [%.2fs]\n', avg_prior_error, avg_post_error, z_matches.num_matches, toc); end

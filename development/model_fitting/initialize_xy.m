@@ -1,8 +1,10 @@
 A = 103;
 B = 104;
-scales = {'full', 1.0, 'half', 0.5, 'rough', 0.07 * 0.78};
+scales = {'full', 1.0, 'rough', 0.07 * 0.78};
 
 %% Initialize and XY align
+initialize_xy_time = tic;
+
 xy_SURF.MetricThreshold = 11000;
 
 % Load sections
@@ -27,3 +29,10 @@ secB.xy_matches = match_xy(secB);
 % Align XY
 secA.alignments.xy = align_xy(secA);
 secB.alignments.xy = align_xy(secB);
+
+% Clear tile images
+for s = fieldnames(secA.tiles)'; secA = clear_tileset(secA, s{1}); end
+for s = fieldnames(secB.tiles)'; secB = clear_tileset(secB, s{1}); end
+
+fprintf('==== Finished XY initialization in %.2fs.\n', toc(initialize_xy_time));
+clear initialize_xy_time s scales xy_SURF

@@ -9,7 +9,7 @@ function final_tform = compose_tforms(tform1, tform2, varargin)
 %   - These transforms are composed from left to right in the order of the
 %   arguments.
 
-tforms = {tform1, tform2, varargin{:}};
+tforms = [{tform1}, {tform2}, varargin];
 
 if length(tforms) < 1
     error('Must input at least one transform.')

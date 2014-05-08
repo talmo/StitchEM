@@ -1,4 +1,4 @@
-function cpd_solve(z_matches)
+function T = cpd_solve(z_matches)
 total_time = tic;
 M = merge_match_sets(z_matches);
 
@@ -6,12 +6,15 @@ X = M.A.global_points;
 Y = M.B.global_points;
 
 % Set the options
-opt.method='affine'; % use rigid registration
+opt.method='affine'; % 'rigid', 'affine', 'nonrigid'
 opt.viz=1;          % show every iteration
 opt.savegif = false;
 
 % registering Y to X
 Transform=cpd_register(X,Y,opt);
+
+T = [[Transform.s * Transform.R'; Transform.t'] [0 0 1]'];
+%T=Transform.s*(Z*Transform.R')+repmat(Transform.t',[size(Z,1) 1]);
 
 avg_prior_error = rownorm2(bsxadd(X, -Y));
 avg_post_error = rownorm2(bsxadd(X, -Transform.Y));

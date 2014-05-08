@@ -90,11 +90,13 @@ if ~isfield(opt,'normalize') || isempty(opt.normalize), opt.normalize = 1; end;
 if ~isfield(opt,'max_it') || isempty(opt.max_it), opt.max_it = 150; end;
 if ~isfield(opt,'tol') || isempty(opt.tol), opt.tol = 1e-5; end;
 if ~isfield(opt,'viz') || isempty(opt.viz), opt.viz = 1; end;
-if ~isfield(opt,'savegif') || isempty(opt.savegif), opt.savegif = false; end;
 if ~isfield(opt,'corresp') || isempty(opt.corresp), opt.corresp = 0; end;
 if ~isfield(opt,'outliers') || isempty(opt.outliers), opt.outliers = 0.1; end;
 if ~isfield(opt,'fgt') || isempty(opt.fgt), opt.fgt = 0; end;
 if ~isfield(opt,'sigma2') || isempty(opt.sigma2), opt.sigma2 = 0; end;
+
+if ~isfield(opt,'savegif') || isempty(opt.savegif), opt.savegif = false; end;
+if ~isfield(opt,'verbosity') || isempty(opt.savegif), opt.verbosity = 1; end;
 
 % strictly rigid params
 if ~isfield(opt,'rot') || isempty(opt.rot), opt.rot = 1; end;
@@ -133,14 +135,14 @@ normal.xscale=1; normal.yscale=1;
 % Normalize to zero mean and unit variance
 if opt.normalize, [X,Y,normal]=cpd_normalize(X,Y); end;
 
-disp(['%%%%% Starting CPD-' upper(opt.method) ' registration. %%%' ]); tic;
+if opt.verbosity > 0; disp(['%%%%% Starting CPD-' upper(opt.method) ' registration. %%%' ]); end; tic;
 
 %%%% Choose the method and start CPD point-set registration
 switch lower(opt.method),
     case 'rigid'
         [C, R, t, s, sigma2, iter, T]=cpd_rigid(X,Y, opt.rot, opt.scale, opt.max_it, opt.tol, opt.viz, opt.outliers, opt.fgt, opt.corresp, opt.sigma2);
        case 'affine'
-        [C, R, t, sigma2, iter, T]=cpd_affine(X,Y, opt.max_it, opt.tol, opt.viz, opt.outliers, opt.fgt, opt.corresp, opt.sigma2, opt.savegif); s=1;
+        [C, R, t, sigma2, iter, T]=cpd_affine(X,Y, opt.max_it, opt.tol, opt.viz, opt.outliers, opt.fgt, opt.corresp, opt.sigma2, opt.savegif, opt.verbosity); s=1;
     case 'nonrigid'
         [C, W, sigma2, iter, T] =cpd_GRBF(X, Y, opt.beta, opt.lambda, opt.max_it, opt.tol, opt.viz, opt.outliers, opt.fgt, opt.corresp, opt.sigma2);    
     case 'nonrigid_lowrank'
@@ -149,7 +151,7 @@ switch lower(opt.method),
         error('The opt.method value is invalid. Supported methods are: rigid, affine, nonrigid, nonrigid_lowrank');
 end
 %%%% 
-disptime(toc);
+if opt.verbosity > 0; disptime(toc); end
 
 Transform.iter=iter;
 Transform.method=opt.method;
