@@ -1,5 +1,5 @@
-A = 103;
-B = 104;
+A = 100;
+B = 101;
 scales = {'full', 1.0, 'rough', 0.07 * 0.78};
 
 %% Initialize and XY align

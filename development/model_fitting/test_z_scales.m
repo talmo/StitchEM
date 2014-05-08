@@ -1,16 +1,19 @@
 % This script evaluates the performance of Z matching using features detected at different scales.
-% Note: Run initialize_xy first
+
+%% Initialization
+% Initializes the two sections by aligning in XY
+initialize_xy
 results = table();
 
 %% Scale
-z_scale = 0.55;
+z_scale = 0.35;
 
 % Load tiles
 secA = load_tileset(secA, 'z', z_scale);
 secB = load_tileset(secB, 'z', z_scale);
 
 %% Matching
-z_SURF.MetricThreshold = 10000; % default = 1000
+z_SURF.MetricThreshold = 7500; % default = 1000
 z_SURF.NumOctaves = 3; % default = 3
 z_SURF.NumScaleLevels = 4; % default = 4
 z_NNR.MatchThreshold = 1.0; % default = 1.0
@@ -54,7 +57,7 @@ observation.lsq_tiles = lsq_tiles_error;
 observation.lsq = secB.alignments.z_lsq.meta.avg_post_error;
 observation.cpd = secB.alignments.z_lsq.meta.avg_post_error;
 results(end + 1, :) = observation;
-writetable(results) % Save!
+writetable(results, sprintf('results_sec%d-%d.txt', secA.num, secB.num)) % Save!
 %% Visualize matches
 % Plot sections and matches
 figure
