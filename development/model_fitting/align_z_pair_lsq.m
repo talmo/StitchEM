@@ -30,7 +30,7 @@ alignmentB.meta.avg_prior_error = avg_prior_error;
 alignmentB.meta.avg_post_error = avg_post_error;
 alignmentB.meta.method = mfilename;
 
-fprintf('Error: %f -> %fpx / match (%d matches) [%.2fs]\n', avg_prior_error, avg_post_error, z_matches.num_matches, toc(total_time))
+cprintf('blue', 'Error: %f -> %fpx / match (%d matches) [%.2fs]\n', avg_prior_error, avg_post_error, z_matches.num_matches, toc(total_time))
 
 end
 

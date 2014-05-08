@@ -6,14 +6,14 @@ initialize_xy
 results = table();
 
 %% Scale
-z_scale = 0.35;
+z_scale = 0.45;
 
 % Load tiles
 secA = load_tileset(secA, 'z', z_scale);
 secB = load_tileset(secB, 'z', z_scale);
 
 %% Matching
-z_SURF.MetricThreshold = 7500; % default = 1000
+z_SURF.MetricThreshold = 9000; % default = 1000
 z_SURF.NumOctaves = 3; % default = 3
 z_SURF.NumScaleLevels = 4; % default = 4
 z_NNR.MatchThreshold = 1.0; % default = 1.0
