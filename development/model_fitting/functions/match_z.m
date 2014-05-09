@@ -151,7 +151,7 @@ matches.meta.unmatched_params = unmatched_params;
 matches.meta.all_displacements = all_displacements;
 matches.meta.avg_unfiltered_error = rownorm2(all_displacements);
 matches.meta.second_pass_threshold = params.second_pass_threshold;
-matches.meta.filtered_displacements = all_displacements;
+matches.meta.filtered_displacements = filtered_displacements;
 matches.meta.avg_error = rownorm2(filtered_displacements);
 
 if params.verbosity > 0; fprintf('Found %d matches. Error: <strong>%fpx / match</strong>. [%.2fs]\n', num_matches, matches.meta.avg_error, toc(total_time)); end

@@ -1,37 +1,40 @@
 % Aligns a stack of sections.
 
 %% Parameters
-sec_nums = (100:149)';
+sec_nums = (50:149)';
 
 % XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
 default.xy.SURF.MetricThreshold = 11000;
 
 % Z alignment
-default.z.scale = 0.35;
-default.z.SURF.MetricThreshold = 10000;
+default.z.scale = 0.125;
+default.z.SURF.MetricThreshold = 2000;
 default.z.NNR.MaxRatio = 0.6;
 default.z.NNR.MatchThreshold = 1.0;
 default.z.match_z.filter_outliers = false;
 default.z.match_z.filter_secondpass = true;
-default.z.second_pass_threshold = '2x';
-default.z.alignment_method = 'lsq'; % 'lsq' or 'cpd'
+default.z.match_z.second_pass_threshold = '1.25x';
+default.z.alignment_method = 'cpd'; % 'lsq' or 'cpd'
+default.z.max_match_error = 1000;
+default.z.max_aligned_error = 50;
 
 % Initialize parameters with defaults
 for s=1:length(sec_nums); params(s) = default; end
 
 % Fallback preset for when Z matching fails
-z_fallback = default.z;
-z_fallback.scale = 0.125;
-z_fallback.SURF.MetricThreshold = 2000;
+%z_fallback = default.z;
+%z_fallback.scale = 0.125;
+%z_fallback.SURF.MetricThreshold = 2000;
 
 % Custom per-section parameters
-params(7).z = z_fallback;
-params(8).z = z_fallback;
-params(9).z = z_fallback;
-params(12).z = z_fallback;
-params(14).z = z_fallback;
-params(15).z = z_fallback;
+% params(7).z = z_fallback;
+% params(8).z = z_fallback;
+% params(9).z = z_fallback;
+% params(12).z = z_fallback;
+% params(14).z = z_fallback;
+% params(15).z = z_fallback;
+%for s=1:length(sec_nums); params(s).z = z_fallback; end
 
 %% Rough & XY Alignment
 xy_time = tic;
@@ -107,22 +110,21 @@ for s = start_at_sec:length(secs)
     if ~isfield(secA.tiles, 'z') || secA.tiles.z.scale ~= z.scale
         secA = load_tileset(secA, 'z', z.scale);
     end
-    secB = load_tileset(secB, 'z', z.scale);
+    if ~isfield(secB.tiles, 'z') || secB.tiles.z.scale ~= z.scale
+        secB = load_tileset(secB, 'z', z.scale);
+    end
     
     % Detect features in overlapping regions
     secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'xy'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
     secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'xy', 'detection_scale', z.scale, z.SURF);
     
-    % Clear tile images in previous section
-    secA = imclear_sec(secA, 'tiles');
-    
     % Match features
     secB.z_matches = match_z(secA, secB, z.match_z, z.NNR);
     
     % Check for bad matching
-    if secB.z_matches.meta.avg_error > 500
+    if secB.z_matches.meta.avg_error > z.max_match_error
         stopped_at = s;
-        error('[sec %d/%d]: Error before alignment is too large for good alignment. Check Z matches and/or try using fallback parameters.', s, length(secs))
+        error('[sec %d/%d]: Error after matching is too large for good alignment. There are probably too many outliers.', s, length(secs))
     end
     
     % Align
@@ -137,10 +139,13 @@ for s = start_at_sec:length(secs)
     end
     
     % Check for bad alignment
-    if secB.alignments.z.meta.avg_post_error > 15
+    if secB.alignments.z.meta.avg_post_error > z.max_aligned_error
         stopped_at = s;
         error('[sec %d/%d]: Error after alignment is too large for good alignment. Check Z matches.', s, length(secs))
     end
+    
+    % Clear tile images in previous section
+    secA = imclear_sec(secA, 'tiles');
     
     % Save
     secs{s - 1} = secA;
@@ -155,7 +160,7 @@ render_region
 
 return
 %% Troubleshooting
-s = 6;
+s = 50;
 secA = secs{s - 1};
 secB = secs{s};
 
@@ -166,7 +171,13 @@ plot_section(secB, 'xy')
 plot_matches(M.A, M.B)
 title(sprintf('Matches (secs %d <-> %d) | Error: %fpx / match', secA.num, secB.num, secB.z_matches.meta.avg_error))
 
+%% Troubleshooting: Plot displacements
+plot_displacements(secB.z_matches.meta.all_displacements), hold on
+scatter(secB.z_matches.meta.filtered_displacements(:,1), secB.z_matches.meta.filtered_displacements(:,2), 'gx')
+title(sprintf('Displacements (secs %d <-> %d) | Error: %fpx / match | n = %d -> %d after filtering', secA.num, secB.num, secB.z_matches.meta.avg_error, length(secB.z_matches.meta.all_displacements), secB.z_matches.num_matches))
+
 %% Troubleshooting: Plot alignment
 plot_section(secA, 'z')
 plot_section(secB, 'z')
-title(sprintf('Secs %d <-> %d | Error: %fpx -> %fpx / match', secA.num, secB.num, secB.alignments.z.meta.avg_prior_error, secB.alignments.z.meta.avg_post_error))
+title(sprintf('Secs %d <-> %d | Error: %fpx -> %fpx / match | Method: %s', secA.num, secB.num, secB.alignments.z.meta.avg_prior_error, secB.alignments.z.meta.avg_post_error, secB.alignments.z.meta.method), 'Interpreter', 'none')
+
