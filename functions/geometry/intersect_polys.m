@@ -31,6 +31,12 @@ PinQ = inpolygon(P(:, 1), P(:, 2), Q(:, 1), Q(:, 2));
 QinP = inpolygon(Q(:, 1), Q(:, 2), P(:, 1), P(:, 2));
 I = [I; P(PinQ, :); Q(QinP, :)];
 
+% Check if we have enough points to form an intersection
+if size(I, 1) < 3
+    I = [];
+    return
+end
+
 % Format as convex hull of all intersecting points
 I = I(convhull(double(I), 'simplify', true), :);
 end

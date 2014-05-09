@@ -4,6 +4,7 @@ function alignmentB = align_z_pair_lsq(secB, z_matches)
 %   alignmentB = align_z_pair_lsq(secB, z_matches)
 
 total_time = tic;
+fprintf('== Aligning section %d to %d (LSQ)\n', z_matches.secB, z_matches.secA)
 
 % Merge matches into a single table
 matches = merge_match_sets(z_matches);
@@ -30,7 +31,6 @@ alignmentB.meta.avg_prior_error = avg_prior_error;
 alignmentB.meta.avg_post_error = avg_post_error;
 alignmentB.meta.method = mfilename;
 
-cprintf('blue', 'Error: %f -> %fpx / match (%d matches) [%.2fs]\n', avg_prior_error, avg_post_error, z_matches.num_matches, toc(total_time))
-
+fprintf('Error: %f -> <strong>%fpx / match</strong> [%.2fs]\n', avg_prior_error, avg_post_error, toc(total_time))
 end
 

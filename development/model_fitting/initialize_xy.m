@@ -1,13 +1,11 @@
-A = 100;
-B = 101;
-scales = {'full', 1.0, 'rough', 0.07 * 0.78};
+% Initialize and XY align two sections
 
-%% Initialize and XY align
 initialize_xy_time = tic;
 
 xy_SURF.MetricThreshold = 11000;
 
 % Load sections
+scales = {'full', 1.0, 'rough', 0.07 * 0.78};
 secA = load_section(A, 'scales', scales);
 secB = load_section(B, 'scales', scales);
 

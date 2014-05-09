@@ -1,13 +1,13 @@
-function [alignmentA, alignmentB] = align_z_pair(secA, secB, z_matches, varargin)
-%ALIGN_Z_PAIR Aligns a pair of sections.
+function [alignmentA, alignmentB] = align_z_pair_lsq_tiles(secA, secB, z_matches, varargin)
+%ALIGN_Z_PAIR_LSQ_TILES Aligns a pair of sections.
 % Usage:
-%   [alignmentA, alignmentB] = align_z_pair(secA, secB, z_matches)
+%   [alignmentA, alignmentB] = align_z_pair_lsq_tiles(secA, secB, z_matches)
 
 % Process parameters
 [params, ~] = parse_input(varargin{:});
-tic;
+total_time = tic;
 
-if params.verbosity > 0; fprintf('== Aligning section %d to section %d\n', secA.num, secB.num); end
+%if params.verbosity > 0; fprintf('== Aligning section %d to section %d\n', secA.num, secB.num); end
 
 % Merge section matches into a single table
 matches = merge_match_sets(z_matches);
@@ -49,8 +49,9 @@ alignmentB.meta.avg_prior_error = avg_prior_error;
 alignmentB.meta.avg_post_error = avg_post_error;
 alignmentB.meta.method = mfilename;
 
-
-if params.verbosity > 0; fprintf('Error: %f -> %fpx / match (%d matches) [%.2fs]\n', avg_prior_error, avg_post_error, z_matches.num_matches, toc); end
+fprintf('%s | Error: %f -> ', mfilename, avg_prior_error)
+cprintf('*text', '%fpx / match ', avg_post_error)
+fprintf('(%d matches) [%.2fs]\n', z_matches.num_matches, toc(total_time))
 
 end
 

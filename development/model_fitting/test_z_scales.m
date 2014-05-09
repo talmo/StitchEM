@@ -1,19 +1,29 @@
 % This script evaluates the performance of Z matching using features detected at different scales.
 
+% Section numbers
+A = 100;
+B = 101;
+
 %% Initialization
 % Initializes the two sections by aligning in XY
 initialize_xy
-results = table();
 
+% Save results
+results_file = sprintf('results_sec%d-%d.csv', A, B);
+if exist(results_file)
+    results = readtable(results_file);
+else
+    results = table();
+end
 %% Scale
-z_scale = 0.45;
+z_scale = 0.35;
 
 % Load tiles
 secA = load_tileset(secA, 'z', z_scale);
 secB = load_tileset(secB, 'z', z_scale);
 
 %% Matching
-z_SURF.MetricThreshold = 9000; % default = 1000
+z_SURF.MetricThreshold = 10000; % default = 1000
 z_SURF.NumOctaves = 3; % default = 3
 z_SURF.NumScaleLevels = 4; % default = 4
 z_NNR.MatchThreshold = 1.0; % default = 1.0
@@ -33,9 +43,11 @@ global_median = geomedian(displacements);
 [~, distances] = rownorm2(bsxadd(displacements, -global_median));
 
 % Solve alignment
+fprintf('== Aligning section %d to section %d\n', B, A)
+
 % LSQ_tiles
 try
-    [secA.alignments.z_lsq_tiles, secB.alignments.z_lsq_tiles] = align_z_pair(secA, secB, z_matches);
+    [secA.alignments.z_lsq_tiles, secB.alignments.z_lsq_tiles] = align_z_pair_lsq_tiles(secA, secB, z_matches);
     lsq_tiles_error = secB.alignments.z_lsq_tiles.meta.avg_post_error;
 catch
     lsq_tiles_error = NaN;
@@ -47,7 +59,7 @@ secB.alignments.z_lsq = align_z_pair_lsq(secB, z_matches);
 % CPD
 secB.alignments.z_cpd = align_z_pair_cpd(secB, z_matches);
 
-% Save results
+%% Save results
 observation = table();
 observation.scale = z_scale;
 observation.MetricThreshold = z_SURF.MetricThreshold;
@@ -57,7 +69,8 @@ observation.lsq_tiles = lsq_tiles_error;
 observation.lsq = secB.alignments.z_lsq.meta.avg_post_error;
 observation.cpd = secB.alignments.z_lsq.meta.avg_post_error;
 results(end + 1, :) = observation;
-writetable(results, sprintf('results_sec%d-%d.txt', secA.num, secB.num)) % Save!
+writetable(results, results_file) % Save!
+return
 %% Visualize matches
 % Plot sections and matches
 figure

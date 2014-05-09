@@ -39,6 +39,7 @@ sz = size(img);
 % Initialize containers
 local_points = cell(numel(params.regions), 1);
 descriptors = cell(numel(params.regions), 1);
+feature_scales = cell(numel(params.regions), 1);
 
 % Detect features in each region
 for i = 1:num_regions
@@ -60,8 +61,9 @@ for i = 1:num_regions
     % Extract descriptors from valid interest points
     [descriptors{i}, valid_points] = extractFeatures(img_region, interest_points);
     
-    % Extract point locations
-    local_points{i} = valid_points(:).Location;
+    % Extract point locations and scale
+    local_points{i} = double(valid_points(:).Location);
+    feature_scales{i} = valid_points(:).Scale;
     
     % Adjust for location of region
     region_offset = [J(1), I(1)] - [1, 1];
@@ -74,11 +76,14 @@ for i = 1:num_regions
 end
 
 % Create region column
-region = arrayfun(@(x) repmat(x, length(local_points{x}), 1), 1:num_regions, 'UniformOutput', false)';
+region = arrayfun(@(x) repmat(x, height(local_points{x}), 1), 1:num_regions, 'UniformOutput', false)';
 
 % Merge into table
-features = table(cell2mat(local_points), cell2mat(descriptors), cell2mat(region), ...
-    'VariableNames', {'local_points', 'descriptors', 'region'});
+features = table();
+features.local_points = cell2mat(local_points);
+features.descriptors = cell2mat(descriptors);
+features.region = cell2mat(region);
+features.feature_scale = cell2mat(feature_scales);
 
 if params.verbosity > 0; fprintf('Found %d features [%.2fs].\n', height(features), toc(total_time)); end
 end

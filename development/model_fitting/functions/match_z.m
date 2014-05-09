@@ -31,6 +31,11 @@ for tA = 1:secA.num_tiles
         regionA = find(featuresA.meta.overlap_with{tA} == tB, 1);
         regionB = find(featuresB.meta.overlap_with{tB} == tA, 1);
         
+        % Skip if we don't have a matching region in either tile
+        if isempty(regionA) || isempty(regionB)
+            continue
+        end
+        
         % Get only the features in these regions
         region_featsA = tile_featsA(tile_featsA.region == regionA, :);
         region_featsB = tile_featsB(tile_featsB.region == regionB, :);
@@ -49,6 +54,8 @@ for tA = 1:secA.num_tiles
         end
         
         % Filter based on distance from median
+        match_set.meta.num_inliers = length(match_set.A);
+        match_set.meta.num_outliers = 0;
         if params.filter_outliers
             displacements = region_featsB.global_points(match_set.B, :) ...
                           - region_featsA.global_points(match_set.A, :);
@@ -83,24 +90,28 @@ for tA = 1:secA.num_tiles
     end
 end
 
+% Combine all matches
+all_matches.A = cell2mat(cellfun(@(m) m.A.global_points, match_sets, 'UniformOutput', false));
+all_matches.B = cell2mat(cellfun(@(m) m.B.global_points, match_sets, 'UniformOutput', false));
+
+% Calculate displacements
+all_displacements = all_matches.B - all_matches.A;
+
 % Second pass of filtering
 if params.filter_secondpass
     % Reset global match counter
     num_matches = 0;
-    
-    % Combine all matches
-    all_matches.A = cell2mat(cellfun(@(m) m.A.global_points, match_sets, 'UniformOutput', false));
-    all_matches.B = cell2mat(cellfun(@(m) m.B.global_points, match_sets, 'UniformOutput', false));
-    
-    % Calculate displacements
-    all_displacements = all_matches.B - all_matches.A;
     
     % Get the global geometric median of displacements
     global_median = geomedian(all_displacements);
     
     % Compute global threshold
     [~, all_distances] = rownorm2(bsxadd(all_displacements, -global_median));
-    global_thresh = median(all_distances) * 3;
+    if ischar(params.second_pass_threshold) && instr('x', params.second_pass_threshold)
+        global_thresh = str2double(params.second_pass_threshold(1:end-1)) * median(all_distances);
+    else
+        global_thresh = params.second_pass_threshold;
+    end
     
     % Re-filter match sets
     for i = 1:length(match_sets)
@@ -122,6 +133,13 @@ if params.filter_secondpass
     end
 end
 
+% Combine all matches after filtering
+filtered_matches.A = cell2mat(cellfun(@(m) m.A.global_points, match_sets, 'UniformOutput', false));
+filtered_matches.B = cell2mat(cellfun(@(m) m.B.global_points, match_sets, 'UniformOutput', false));
+
+% Compute displacements
+filtered_displacements = filtered_matches.B - filtered_matches.A;
+
 % Save to output structure
 matches.match_sets = match_sets;
 matches.tile_idx = match_idx;
@@ -130,8 +148,13 @@ matches.secB = secB.num;
 matches.feature_set = params.feature_set;
 matches.num_matches = num_matches;
 matches.meta.unmatched_params = unmatched_params;
+matches.meta.all_displacements = all_displacements;
+matches.meta.avg_unfiltered_error = rownorm2(all_displacements);
+matches.meta.second_pass_threshold = params.second_pass_threshold;
+matches.meta.filtered_displacements = all_displacements;
+matches.meta.avg_error = rownorm2(filtered_displacements);
 
-if params.verbosity > 0; fprintf('Found %d matches. [%.2fs]\n', num_matches, toc(total_time)); end
+if params.verbosity > 0; fprintf('Found %d matches. Error: <strong>%fpx / match</strong>. [%.2fs]\n', num_matches, matches.meta.avg_error, toc(total_time)); end
 
 end
 
@@ -147,6 +170,7 @@ p.addParameter('feature_set', 'z');
 % Filter outliers
 p.addParameter('filter_outliers', true);
 p.addParameter('filter_secondpass', true);
+p.addParameter('second_pass_threshold', '2x');
 
 % Columns to keep for the matched features
 p.addParameter('keep_cols', {'local_points', 'global_points'});

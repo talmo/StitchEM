@@ -1,5 +1,9 @@
 function tile_img = imload_tile(sec_num, tile_num, scale, wafer_path)
 %IMLOAD_TILE Loads a tile given a section and tile number.
+% Usage:
+%   tile_img = imload_tile(sec_num, tile_num)
+%   tile_img = imload_tile(sec_num, tile_num, scale)
+%   tile_img = imload_tile(sec_num, tile_num, scale, wafer_path)
 
 if nargin < 3
     scale = 1.0;

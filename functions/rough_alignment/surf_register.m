@@ -92,7 +92,7 @@ interest_points = detectSURFFeatures(img, ...
     'SURFSize', params.SURFSize);
 
 % Save valid points
-points = valid_points(:).Location;
+points = double(valid_points(:).Location);
 
 end
 

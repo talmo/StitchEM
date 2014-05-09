@@ -1,5 +1,8 @@
 function plot_regions(regions, scale)
 %PLOT_REGIONS Plots regions specified as polygons.
+% Usage:
+%   plot_regions(regions)
+%   plot_regions(regions, scale)
 
 if nargin < 2
     scale = 1.0;

@@ -78,6 +78,7 @@ features.alignment = params.alignment;
 features.meta.wafer = sec.wafer;
 features.meta.section = sec.num;
 features.meta.tile_set = tile_set;
+features.meta.tile_set_scale = pre_scale;
 features.meta.detection_scale = params.detection_scale;
 features.meta.overlaps = overlaps;
 features.meta.overlap_with = overlap_with;
