@@ -1,7 +1,7 @@
 % Aligns a stack of sections.
 
 %% Parameters
-sec_nums = (50:149)';
+sec_nums = (1:169)';
 
 % XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
@@ -28,18 +28,23 @@ for s=1:length(sec_nums); params(s) = default; end
 %z_fallback.SURF.MetricThreshold = 2000;
 
 % Custom per-section parameters
-% params(7).z = z_fallback;
-% params(8).z = z_fallback;
-% params(9).z = z_fallback;
-% params(12).z = z_fallback;
-% params(14).z = z_fallback;
-% params(15).z = z_fallback;
-%for s=1:length(sec_nums); params(s).z = z_fallback; end
-
+% params(38).z.match_z.second_pass_threshold = '1.0x';
+% params(38).z.max_aligned_error = 150;
+% params(39).z.max_aligned_error = 65;
+% params(40).z.max_match_error = 1100;
+% params(40).z.max_aligned_error = 100;
+% params(41).z.max_aligned_error = 100;
+% params(42).z.max_aligned_error = 100;
+% for s=43:length(sec_nums); params(s).z.max_aligned_error = 100; end
+% for s=47:length(sec_nums); params(s).z.max_match_error = 1500; end
+% for s=47:length(sec_nums); params(s).z.max_aligned_error = 150; end
+% for s=67:length(sec_nums); params(s).z.max_aligned_error = 200; end
 %% Rough & XY Alignment
 xy_time = tic;
+if ~exist('stopped_at', 'var'); stopped_at = NaN; end
+start_at_sec = max(1, stopped_at);
 secs = cell(size(sec_nums));
-for s = 1:length(secs)
+for s = start_at_sec:length(secs)
     fprintf('=== Aligning section %d (<strong>%d/%d</strong>) in XY\n', sec_nums(s), s, length(secs))
     
     % Parameters
@@ -47,17 +52,6 @@ for s = 1:length(secs)
     
     % Load section
     sec = load_section(sec_nums(s), 'scales', xy.scales);
-    
-    if s > 1
-        try
-            % Align overviews
-            sec.overview.alignment = align_overviews(secs{s - 1}, sec);
-        catch
-            % Fallback to the same alignment as the previous section
-            sec.overview.alignment = secs{s - 1}.overview.alignment;
-        end
-        secs{s - 1} = imclear_sec(secs{s - 1}, 'overview');
-    end
 
     % Rough alignment
     sec.alignments.rough = rough_align(sec);
@@ -65,8 +59,8 @@ for s = 1:length(secs)
     % Detect XY features
     sec.features.xy = detect_features(sec, 'regions', 'xy', xy.SURF);
 
-    % Clear tile images
-    sec = imclear_sec(sec, 'tiles');
+    % Clear images
+    sec = imclear_sec(sec);
     
     % Match XY features
     sec.xy_matches = match_xy(sec);
@@ -78,9 +72,9 @@ for s = 1:length(secs)
     secs{s} = sec;
     clear sec
 end
-secs{end} = imclear_sec(secs{end}, 'overview');
 cprintf('*text', '==== Finished XY alignment in %.2fs.\n\n', toc(xy_time));
-
+clear stopped_at
+save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs')
 %% Z Alignment
 z_time = tic;
 
@@ -106,6 +100,16 @@ for s = start_at_sec:length(secs)
     secA = secs{s - 1};
     secB = secs{s};
     
+    % Rough align based on overviews
+    try
+        imload_sec
+        secB.overview.alignment = align_overviews(secA, secB);
+    catch
+        % Fallback to the same alignment as the previous section
+        secB.overview.alignment = secA.overview.alignment;
+    end
+    secA = imclear_sec(secA, 'overview');
+    
     % Load tiles at Z feature detection scale
     if ~isfield(secA.tiles, 'z') || secA.tiles.z.scale ~= z.scale
         secA = load_tileset(secA, 'z', z.scale);
@@ -114,9 +118,14 @@ for s = start_at_sec:length(secs)
         secB = load_tileset(secB, 'z', z.scale);
     end
     
+    % Compose with previous section's Z alignment
+    secB.alignments.z_rel = secB.alignments.xy;
+    secB.alignments.z_rel.rel_tforms = secA.alignments.rel_tforms;
+    secB.alignments.z_rel.tforms = cellfun(@(t1, t2) compose_tforms(t1, t2), secB.alignments.z_rel.rel_tforms, secB.alignments.z_rel.rel_tforms, 'UniformOutput', false);
+    
     % Detect features in overlapping regions
-    secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'xy'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
-    secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'xy', 'detection_scale', z.scale, z.SURF);
+    secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'z_rel'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
+    secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'z_rel', 'detection_scale', z.scale, z.SURF);
     
     % Match features
     secB.z_matches = match_z(secA, secB, z.match_z, z.NNR);

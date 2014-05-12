@@ -19,7 +19,7 @@ cpd_tform = cpd_register(matches.A.global_points, matches.B.global_points, opt);
 tform = affine2d([[cpd_tform.s * cpd_tform.R'; cpd_tform.t'] [0 0 1]']);
 
 % All the transforms are adjusted by the same section transformation
-rel_to = 'xy';
+rel_to = 'z_rel';
 rel_tforms = repmat({tform}, secB.num_tiles, 1);
 tforms = cellfun(@(t1, t2) compose_tforms(t1, t2), secB.alignments.(rel_to).tforms, rel_tforms, 'UniformOutput', false);
 
