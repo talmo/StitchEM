@@ -1,5 +1,9 @@
 function tiles = imload_section_tiles(sec_num, scale, wafer_path)
 %IMLOAD_SECTION_TILES Loads and optionally rescales the tile images of a section.
+% Usage:
+%   tiles = imload_section_tiles(sec_num)
+%   tiles = imload_section_tiles(sec_num, scale)
+%   tiles = imload_section_tiles(sec_num, scale, wafer_path)
 
 % Parameters
 if nargin < 2

@@ -3,6 +3,8 @@ function alignmentB = align_z_pair_lsq(secB, z_matches)
 % Usage:
 %   alignmentB = align_z_pair_lsq(secB, z_matches)
 
+base_alignment = 'rough_z';
+
 total_time = tic;
 fprintf('== Aligning section %d to %d (LSQ)\n', z_matches.secB, z_matches.secA)
 
@@ -15,7 +17,7 @@ T = [matches.B.global_points ones(z_matches.num_matches, 1)] \ [matches.A.global
 tform = affine2d([T(:, 1:2) [0 0 1]']);
 
 % All the transforms are adjusted by the same section transformation
-rel_to = 'z_rel';
+rel_to = base_alignment;
 rel_tforms = repmat({tform}, secB.num_tiles, 1);
 tforms = cellfun(@(t1, t2) compose_tforms(t1, t2), secB.alignments.(rel_to).tforms, rel_tforms, 'UniformOutput', false);
 

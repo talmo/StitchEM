@@ -29,7 +29,7 @@ overview_alignment.rel_tform = rel_tform;
 overview_alignment.rel_to_sec = secA.num;
 
 if params.verbosity > 0
-    fprintf('Done aligning overviews. Mean error = %.2fpx [%.2fs]\n', mean_registration_error, toc(registration_time))
+    fprintf('Aligned overviews. Error = %.2fpx / match [%.2fs]\n', mean_registration_error, toc(registration_time))
 end
 
 end

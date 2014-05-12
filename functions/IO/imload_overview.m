@@ -1,5 +1,9 @@
 function overview_img = imload_overview(sec_num, scale, wafer_path)
 %IMLOAD_OVERVIEW Loads the overview image for a given section.
+% Usage:
+%   overview_img = imload_overview(sec_num)
+%   overview_img = imload_overview(sec_num, scale)
+%   overview_img = imload_overview(sec_num, scale, wafer_path)
 
 if nargin < 2
     scale = 1.0;

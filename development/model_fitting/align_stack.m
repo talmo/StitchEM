@@ -1,13 +1,15 @@
 % Aligns a stack of sections.
 
 %% Parameters
+% Sections to align
 sec_nums = (1:169)';
 
-% XY alignment
+% Defaults: XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
 default.xy.SURF.MetricThreshold = 11000;
 
-% Z alignment
+% Defaults: Z alignment
+default.z.rough_align.overview_scale = 0.78;
 default.z.scale = 0.125;
 default.z.SURF.MetricThreshold = 2000;
 default.z.NNR.MaxRatio = 0.6;
@@ -54,7 +56,7 @@ for s = start_at_sec:length(secs)
     sec = load_section(sec_nums(s), 'scales', xy.scales);
 
     % Rough alignment
-    sec.alignments.rough = rough_align(sec);
+    sec.alignments.rough_xy = rough_align_xy(sec);
 
     % Detect XY features
     sec.features.xy = detect_features(sec, 'regions', 'xy', xy.SURF);
@@ -69,12 +71,13 @@ for s = start_at_sec:length(secs)
     sec.alignments.xy = align_xy(sec);
     
     % Save
+    sec.params.xy = xy;
     secs{s} = sec;
     clear sec
 end
 cprintf('*text', '==== Finished XY alignment in %.2fs.\n\n', toc(xy_time));
 clear stopped_at
-save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs')
+save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
 %% Z Alignment
 z_time = tic;
 
@@ -100,32 +103,27 @@ for s = start_at_sec:length(secs)
     secA = secs{s - 1};
     secB = secs{s};
     
-    % Rough align based on overviews
+    % Load images
+    if ~isfield(secA.overview.img) || isempty(secA.overview.img) || secA.overview.scale ~= z.rough_align.overview_scale; secA = load_overview(secA, z.rough_align.overview_scale); end
+    if ~isfield(secB.overview.img) || isempty(secB.overview.img) || secB.overview.scale ~= z.rough_align.overview_scale; secB = load_overview(secB, z.rough_align.overview_scale); end
+    if ~isfield(secA.tiles, 'z') || secA.tiles.z.scale ~= z.scale; secA = load_tileset(secA, 'z', z.scale); end
+    if ~isfield(secB.tiles, 'z') || secB.tiles.z.scale ~= z.scale; secB = load_tileset(secB, 'z', z.scale); end
+
+    % Register overviews
     try
-        imload_sec
         secB.overview.alignment = align_overviews(secA, secB);
     catch
         % Fallback to the same alignment as the previous section
+        fprintf('Could not align overview of section %d to %d.\n', secB.num, secA.num)
         secB.overview.alignment = secA.overview.alignment;
     end
-    secA = imclear_sec(secA, 'overview');
     
-    % Load tiles at Z feature detection scale
-    if ~isfield(secA.tiles, 'z') || secA.tiles.z.scale ~= z.scale
-        secA = load_tileset(secA, 'z', z.scale);
-    end
-    if ~isfield(secB.tiles, 'z') || secB.tiles.z.scale ~= z.scale
-        secB = load_tileset(secB, 'z', z.scale);
-    end
-    
-    % Compose with previous section's Z alignment
-    secB.alignments.z_rel = secB.alignments.xy;
-    secB.alignments.z_rel.rel_tforms = secA.alignments.rel_tforms;
-    secB.alignments.z_rel.tforms = cellfun(@(t1, t2) compose_tforms(t1, t2), secB.alignments.z_rel.rel_tforms, secB.alignments.z_rel.rel_tforms, 'UniformOutput', false);
+    % Do rough alignment in Z based on overviews
+    secB.rough_z = rough_align_z(secA, secB, z.rough_align);
     
     % Detect features in overlapping regions
-    secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'z_rel'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
-    secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'z_rel', 'detection_scale', z.scale, z.SURF);
+    secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'rough_z'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
+    secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'rough_z', 'detection_scale', z.scale, z.SURF);
     
     % Match features
     secB.z_matches = match_z(secA, secB, z.match_z, z.NNR);
@@ -157,11 +155,12 @@ for s = start_at_sec:length(secs)
     secA = imclear_sec(secA, 'tiles');
     
     % Save
+    secB.params.z = z;
     secs{s - 1} = secA;
     secs{s} = secB;
     clear secA secB
 end
-secs{end} = imclear_sec(secs{end}, 'tiles');
+secs{end} = imclear_sec(secs{end});
 cprintf('*text', '==== Finished Z alignment in %.2fs.\n\n', toc(z_time));
 
 %% Render
