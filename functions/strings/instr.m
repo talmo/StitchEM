@@ -54,9 +54,9 @@ if ~iscellstr(haystack); haystack = {haystack}; end
 % Figure out matching function
 if substr
     if case_sensitive
-        f = @(str, patterns) any(cellfun(@(pattern) ~isempty(strfind(str, pattern)), patterns));
+        f = @(pattern, str) any(cellfun(@(s) ~isempty(strfind(s, pattern)), str));
     else
-        f = @(str, patterns) any(cellfun(@(pattern) ~isempty(strfind(lower(str), lower(pattern))), patterns));
+        f = @(pattern, str) any(cellfun(@(s) ~isempty(strfind(lower(s), lower(pattern))), str));
     end
 elseif regex
     case_option = 'ignorecase'; if case_sensitive; case_option = 'matchcase'; end

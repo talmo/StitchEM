@@ -6,10 +6,14 @@ function alignmentB = align_z_pair_cpd(secB, z_matches)
 base_alignment = 'rough_z';
 
 total_time = tic;
-fprintf('== Aligning section %d to %d (CPD)\n', z_matches.secB, z_matches.secA)
+fprintf('== Aligning section %d in Z (CPD)\n', secB.num)
 
 % Merge matches into a single table
-matches = merge_match_sets(z_matches);
+if isfield(z_matches, 'match_sets')
+    matches = merge_match_sets(z_matches);
+else
+    matches = z_matches;
+end
 
 % CPD options
 opt.method = 'affine'; % 'rigid', 'affine', 'nonrigid'

@@ -19,7 +19,9 @@ output_folder = GetFullPath(['renders' filesep stack_name]);
 if ~exist(output_folder, 'dir'); mkdir(output_folder); end
 
 %% Calculate spatial references
-total_time = tic;
+total_render_time = tic;
+disp('==== <strong>Started rendering section regions</strong>.')
+
 tile_Rs = cell(length(secs), 1);
 for s = 1:length(secs)
     % For convenience
@@ -112,4 +114,4 @@ for s = 1:length(secs)
     fprintf('Rendered section %d (%d/%d). [%.2fs]\n', sec.num, s, length(secs), toc(render_time))
     clear region tiles sec
 end
-cprintf('*text', '==== Done rendering the region in %d sections. [%.2fs] \n\n', length(secs), toc(total_time));
+fprintf('==== <strong>Done rendering the region in %d sections. [%.2fs]</strong>\n\n', length(secs), toc(total_render_time));

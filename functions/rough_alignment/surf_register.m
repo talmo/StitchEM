@@ -1,5 +1,8 @@
 function [tform, fixed_inliers, moving_inliers, mean_registration_error] = surf_register(fixed_img, moving_img, varargin)
 %SURF_REGISTER Estimates a transformation to register two images.
+% Usage:
+%   tform = surf_register(fixed_img, moving_img)
+%   [tform, fixed_inliers, moving_inliers, mean_registration_error] = surf_register(...)
 
 % Parse inputs
 [fixed_img, moving_img, params] = parse_inputs(fixed_img, moving_img, varargin{:});

@@ -10,8 +10,8 @@ if params.verbosity > 0; fprintf('== Matching Z features between sections %d and
 total_time = tic;
 
 % Feature sets
-featuresA = secA.features.zA;
-featuresB = secB.features.zB;
+featuresA = secA.features.z;
+featuresB = secB.features.rough_z;
 
 % Find matches between pairs of tiles
 match_sets = {};

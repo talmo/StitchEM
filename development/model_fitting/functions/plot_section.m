@@ -13,7 +13,7 @@ else
     bounding_boxes = sec_bb(sec, alignment);
 end
 if nargin < 3
-    PatchSpec = '0.5';
+    PatchSpec = '0.1';
 end
 
 % Draw each bounding box with the same PatchSpec
@@ -30,7 +30,7 @@ ax2int()
 if nargin < 2
     title(sprintf('Section %d', sec.num))
 else
-    title(sprintf('Section %d | Alignment: %s', sec.num, alignment))
+    title(sprintf('Section %d | Alignment: %s', sec.num, alignment), 'Interpreter', 'none')
 end
 
 end

@@ -27,9 +27,22 @@ tform = compose_tforms(base_tform, rel_tform);
 overview_alignment.tform = tform;
 overview_alignment.rel_tform = rel_tform;
 overview_alignment.rel_to_sec = secA.num;
+overview_alignment.meta.detection_scale = params.detection_scale;
+overview_alignment.meta.crop_ratio = params.crop_ratio;
+overview_alignment.meta.median_filter_radius = params.median_filter_radius;
 
 if params.verbosity > 0
     fprintf('Aligned overviews. Error = %.2fpx / match [%.2fs]\n', mean_registration_error, toc(registration_time))
+end
+
+% Visualize alignment result
+if params.visualize
+    [A, R_A] = imwarp(filteredA, base_tform);
+    [B, R_B] = imwarp(filteredB, tform);
+    
+    figure
+    imshowpair(A, R_A, B, R_B)
+    title(sprintf('Aligned overviews of sections %d and %d | scale = %sx | mean error = %s px / match', secA.num, secB.num, num2str(params.detection_scale), num2str(mean_registration_error)))
 end
 
 end
@@ -71,7 +84,7 @@ p.addParameter('median_filter_radius', 6);
 p.addParameter('verbosity', 1);
 
 % Visualization
-p.addParameter('show_registration', false);
+p.addParameter('visualize', false);
 
 % Validate and parse input
 p.parse(varargin{:});

@@ -1,7 +1,15 @@
-function [inliers, outliers] = geomedfilter(displacements, varargin)
+function [inliers, outliers, M, distances, thresh] = geomedfilter(displacements, varargin)
 %GEOMEDFILTER Filters a set of point displacements based on their distance from the geometric median.
 % Usage:
-%   [inliers, outliers] = geomedfilter(displacements)
+%   inliers = geomedfilter(displacements)
+%   inliers = geomedfilter(displacements, expected_median)
+%   inliers = geomedfilter(..., 'threshold', '3x')
+%   [inliers, outliers] = geomedfilter(...)
+%   [inliers, outliers, M] = geomedfilter(...)
+%   [inliers, outliers, M, distances] = geomedfilter(...)
+%   [inliers, outliers, M, distances, thresh] = geomedfilter(...)
+%
+% inliers and outliers are index arrays (not logical).
 
 % Process parameters
 [params, unmatched_params] = parse_input(varargin{:});

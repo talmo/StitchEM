@@ -2,7 +2,7 @@
 
 %% Parameters
 % Sections to align
-sec_nums = (1:5)';
+sec_nums = (1:30)';
 
 % Defaults: XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
@@ -10,13 +10,20 @@ default.xy.SURF.MetricThreshold = 11000;
 
 % Defaults: Z alignment
 default.z.rough_align.overview_scale = 0.78;
-default.z.scale = 0.125;
-default.z.SURF.MetricThreshold = 2000;
+
+% 0.125x
+%default.z.scale = 0.125;
+%default.z.SURF.MetricThreshold = 2000;
+
+% 0.25x
+default.z.scale = 0.25;
+default.z.SURF.MetricThreshold = 7500;
+
 default.z.NNR.MaxRatio = 0.6;
 default.z.NNR.MatchThreshold = 1.0;
-default.z.match_z.filter_outliers = false;
-default.z.match_z.filter_secondpass = true;
-default.z.match_z.second_pass_threshold = '1.25x';
+% default.z.match_z.filter_outliers = false;
+% default.z.match_z.filter_secondpass = true;
+% default.z.match_z.second_pass_threshold = '1.25x';
 default.z.alignment_method = 'cpd'; % 'lsq' or 'cpd'
 default.z.max_match_error = 1000;
 default.z.max_aligned_error = 50;
@@ -43,6 +50,7 @@ for s=1:length(sec_nums); params(s) = default; end
 % for s=67:length(sec_nums); params(s).z.max_aligned_error = 200; end
 %% Rough & XY Alignment
 xy_time = tic;
+disp('==== <strong>Started XY alignment</strong>.')
 if ~exist('stopped_at', 'var'); stopped_at = NaN; end
 start_at_sec = max(1, stopped_at);
 secs = cell(size(sec_nums));
@@ -60,9 +68,6 @@ for s = start_at_sec:length(secs)
 
     % Detect XY features
     sec.features.xy = detect_features(sec, 'regions', 'xy', xy.SURF);
-
-    % Clear images
-    sec = imclear_sec(sec);
     
     % Match XY features
     sec.xy_matches = match_xy(sec);
@@ -70,16 +75,25 @@ for s = start_at_sec:length(secs)
     % Align XY
     sec.alignments.xy = align_xy(sec);
     
+    % Clear images and XY features to save memory
+    sec = imclear_sec(sec);
+    sec.features.xy.tiles = [];
+    
     % Save
     sec.params.xy = xy;
     secs{s} = sec;
     clear sec
 end
-cprintf('*text', '==== Finished XY alignment in %.2fs.\n\n', toc(xy_time));
 clear stopped_at
+
+% Save to cache
+disp('=== Saving sections to disk.');
 save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
+
+fprintf('==== <strong>Finished XY alignment in %.2fs</strong>.\n\n', toc(xy_time));
 %% Z Alignment
 z_time = tic;
+disp('==== <strong>Started Z alignment</strong>.')
 
 % Resume where we stopped if we get an error
 if ~exist('stopped_at', 'var'); stopped_at = NaN; end
@@ -118,15 +132,16 @@ for s = start_at_sec:length(secs)
         secB.overview.alignment = secA.overview.alignment;
     end
     
-    % Do rough alignment in Z based on overviews
+    % Compute rough Z alignment based on overview registration
     secB.alignments.rough_z = rough_align_z(secA, secB, z.rough_align);
     
     % Detect features in overlapping regions
-    secA.features.zA = detect_features(secA, 'regions', sec_bb(secB, 'rough_z'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
-    secB.features.zB = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'rough_z', 'detection_scale', z.scale, z.SURF);
+    secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'rough_z'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
+    secB.features.rough_z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'rough_z', 'detection_scale', z.scale, z.SURF);
     
     % Match features
-    secB.z_matches = match_z(secA, secB, z.match_z, z.NNR);
+    %secB.z_matches = match_z(secA, secB, z.match_z, z.NNR);
+    secB.z_matches = match_z_gmm(secA, secB, z.NNR);
     
     % Check for bad matching
     if secB.z_matches.meta.avg_error > z.max_match_error
@@ -161,7 +176,7 @@ for s = start_at_sec:length(secs)
     clear secA secB
 end
 secs{end} = imclear_sec(secs{end});
-cprintf('*text', '==== Finished Z alignment in %.2fs.\n\n', toc(z_time));
+fprintf('==== <strong>Finished Z alignment in %.2fs</strong>.\n\n', toc(z_time));
 
 %% Render
 render_region
@@ -172,20 +187,34 @@ s = 2;
 secA = secs{s - 1};
 secB = secs{s};
 
+%% Troubleshooting: Plot features (secA)
+pointsA = cell2mat(cellfun(@(t) t.global_points,  secA.features.z.tiles, 'UniformOutput', false));
+
+plot_section(secA, secA.features.z.meta.base_alignment);
+plot_features(pointsA)
+
+%% Troubleshooting: Plot features (secB)
+pointsB = cell2mat(cellfun(@(t) t.global_points,  secB.features.rough_z.tiles, 'UniformOutput', false));
+
+plot_section(secB, secB.features.rough_z.meta.base_alignment);
+plot_features(pointsB)
+
 %% Troubleshooting: Plot matches
-M = merge_match_sets(secB.z_matches);
-plot_section(secA, 'z')
-plot_section(secB, 'rough_z')
-plot_matches(M.A, M.B)
+%M = merge_match_sets(secB.z_matches);
+plot_section(secA, 'z', 'r0.1')
+plot_section(secB, 'rough_z', 'g0.1')
+%plot_matches(M.A, M.B)
+plot_matches(secB.z_matches.A, secB.z_matches.B)
 title(sprintf('Matches (secs %d <-> %d) | Error: %fpx / match', secA.num, secB.num, secB.z_matches.meta.avg_error))
 
 %% Troubleshooting: Plot displacements
 plot_displacements(secB.z_matches.meta.all_displacements), hold on
-scatter(secB.z_matches.meta.filtered_displacements(:,1), secB.z_matches.meta.filtered_displacements(:,2), 'gx')
+displacements = secB.z_matches.B.global_points - secB.z_matches.A.global_points;
+scatter(displacements(:,1), displacements(:,2), 'gx')
 title(sprintf('Displacements (secs %d <-> %d) | Error: %fpx / match | n = %d -> %d after filtering', secA.num, secB.num, secB.z_matches.meta.avg_error, length(secB.z_matches.meta.all_displacements), secB.z_matches.num_matches))
 
 %% Troubleshooting: Plot alignment
-plot_section(secA, 'z')
-plot_section(secB, 'z')
+plot_section(secA, 'z', 'r0.1')
+plot_section(secB, 'z', 'g0.1')
 title(sprintf('Secs %d <-> %d | Error: %fpx -> %fpx / match | Method: %s', secA.num, secB.num, secB.alignments.z.meta.avg_prior_error, secB.alignments.z.meta.avg_post_error, secB.alignments.z.meta.method), 'Interpreter', 'none')
 

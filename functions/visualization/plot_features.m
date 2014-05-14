@@ -32,6 +32,7 @@ if istable(features)
     end
 end
 
+
 % Scale the points
 if scale ~= 1.0
     features = features * scale;
