@@ -16,7 +16,7 @@ matches = merge_match_sets(sec.xy_matches);
 [rel_tforms, avg_prior_error, avg_post_error] = sp_lsq(matches, params.fixed_tile);
 
 % Compose with rough transforms
-tforms = cellfun(@(rough, rel) compose_tforms(rough, rel), sec.alignments.rough.tforms, rel_tforms, 'UniformOutput', false);
+tforms = cellfun(@(rough, rel) compose_tforms(rough, rel), sec.alignments.rough_xy.tforms, rel_tforms, 'UniformOutput', false);
 
 % Save to data structure
 alignment.tforms = tforms;

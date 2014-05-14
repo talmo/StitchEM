@@ -10,8 +10,8 @@ if params.verbosity > 0; fprintf('== Matching Z features between sections %d and
 total_time = tic;
 
 % Feature sets
-featuresA = secA.features.(params.feature_set);
-featuresB = secB.features.(params.feature_set);
+featuresA = secA.features.zA;
+featuresB = secB.features.zB;
 
 % Find matches between pairs of tiles
 match_sets = {};
@@ -145,7 +145,6 @@ matches.match_sets = match_sets;
 matches.tile_idx = match_idx;
 matches.secA = secA.num;
 matches.secB = secB.num;
-matches.feature_set = params.feature_set;
 matches.num_matches = num_matches;
 matches.meta.unmatched_params = unmatched_params;
 matches.meta.all_displacements = all_displacements;
@@ -163,9 +162,6 @@ function [params, unmatched] = parse_input(varargin)
 % Create inputParser instance
 p = inputParser;
 p.KeepUnmatched = true;
-
-% Feature set
-p.addParameter('feature_set', 'z');
 
 % Filter outliers
 p.addParameter('filter_outliers', true);

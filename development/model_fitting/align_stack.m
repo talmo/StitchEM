@@ -2,7 +2,7 @@
 
 %% Parameters
 % Sections to align
-sec_nums = (1:169)';
+sec_nums = (1:5)';
 
 % Defaults: XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
@@ -104,8 +104,8 @@ for s = start_at_sec:length(secs)
     secB = secs{s};
     
     % Load images
-    if ~isfield(secA.overview.img) || isempty(secA.overview.img) || secA.overview.scale ~= z.rough_align.overview_scale; secA = load_overview(secA, z.rough_align.overview_scale); end
-    if ~isfield(secB.overview.img) || isempty(secB.overview.img) || secB.overview.scale ~= z.rough_align.overview_scale; secB = load_overview(secB, z.rough_align.overview_scale); end
+    if ~isfield(secA.overview, 'img') || isempty(secA.overview.img) || secA.overview.scale ~= z.rough_align.overview_scale; secA = load_overview(secA, z.rough_align.overview_scale); end
+    if ~isfield(secB.overview, 'img') || isempty(secB.overview.img) || secB.overview.scale ~= z.rough_align.overview_scale; secB = load_overview(secB, z.rough_align.overview_scale); end
     if ~isfield(secA.tiles, 'z') || secA.tiles.z.scale ~= z.scale; secA = load_tileset(secA, 'z', z.scale); end
     if ~isfield(secB.tiles, 'z') || secB.tiles.z.scale ~= z.scale; secB = load_tileset(secB, 'z', z.scale); end
 
@@ -119,11 +119,11 @@ for s = start_at_sec:length(secs)
     end
     
     % Do rough alignment in Z based on overviews
-    secB.rough_z = rough_align_z(secA, secB, z.rough_align);
+    secB.alignments.rough_z = rough_align_z(secA, secB, z.rough_align);
     
     % Detect features in overlapping regions
-    secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'rough_z'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
-    secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'rough_z', 'detection_scale', z.scale, z.SURF);
+    secA.features.zA = detect_features(secA, 'regions', sec_bb(secB, 'rough_z'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
+    secB.features.zB = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'rough_z', 'detection_scale', z.scale, z.SURF);
     
     % Match features
     secB.z_matches = match_z(secA, secB, z.match_z, z.NNR);
@@ -168,14 +168,14 @@ render_region
 
 return
 %% Troubleshooting
-s = 50;
+s = 2;
 secA = secs{s - 1};
 secB = secs{s};
 
 %% Troubleshooting: Plot matches
 M = merge_match_sets(secB.z_matches);
 plot_section(secA, 'z')
-plot_section(secB, 'xy')
+plot_section(secB, 'rough_z')
 plot_matches(M.A, M.B)
 title(sprintf('Matches (secs %d <-> %d) | Error: %fpx / match', secA.num, secB.num, secB.z_matches.meta.avg_error))
 

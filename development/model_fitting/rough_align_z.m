@@ -13,18 +13,18 @@ function alignment = rough_align_z(secA, secB, varargin)
 % inv(base) -> initialToOverview -> overview.alignment -> inv(initialToOverview) -> base
 
 
-base_tforms = secB.alignments.xy;
+base_tforms = secB.alignments.xy.tforms;
 
 % Get the intermediate tforms in the rough XY alignment
 intermediates = secB.alignments.rough_xy.meta.intermediate_tforms;
 
 % Transforms to go from initial to the overview
-initial2overview = cellfun(@(intermediate) intermediate.prescale, intermediate.registration, intermediates, 'UniformOutput', false);
+initial2overview = cellfun(@(intermediate) compose_tforms(intermediate.prescale, intermediate.registration), intermediates, 'UniformOutput', false);
 
 overview_tform = secB.overview.alignment.tform;
 
 % base -> initial -> overview -> (apply overview alignment) -> initial -> base -> z_prev
-rel_tforms = cellfun(@(base, i2o, z_rel) compose_tforms(base.invert, i2o, overview_tform, i2o.invert, base, z_rel), base_tforms, initial2overview, secA.alignments.z.rel_tforms, 'UniformOutput');
+rel_tforms = cellfun(@(base, i2o, z_rel) compose_tforms(base.invert, i2o, overview_tform, i2o.invert, base, z_rel), base_tforms, initial2overview, secA.alignments.z.rel_tforms, 'UniformOutput', false);
 tforms = cellfun(@(base, rel_tforms) compose_tforms(base, rel_tforms), base_tforms, rel_tforms, 'UniformOutput', false);
 
 alignment.rel_tforms = rel_tforms;
