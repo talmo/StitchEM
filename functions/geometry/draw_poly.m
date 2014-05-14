@@ -1,136 +1,136 @@
-function varargout = draw_poly(P, varargin)
+function varargout = draw_poly(points, varargin)
 %DRAW_POLY Plots a polygon from a set of points.
 %
 % Usage:
 %   draw_poly(P)
 %   draw_poly(Px, Py)
-%   draw_poly(Px, Py, patch_spec)
+%   draw_poly(..., PatchSpec)
+%   V = draw_poly(...)
+%   [Vx, Vy] = draw_poly(...)
 %
 % Args:
 %   P is a Mx2 or 2xM matrix containing a set of points which define the
 %       polygon by their convex hull.
 %   Px, Py are Mx1 or 1xM vectors of the x and y coordinates of P.
-%   patch_spec is '?0.75' by default. This is a string that specifies the
-%       short name for the color of the face of the patch, followed by the
-%       alpha transparency value between 0 and 1.0. Setting the color to
-%       '?' will set the color to the next color on the current axes.
+%   PatchSpec is a string that specifies how to display the polygon. This
+%       may be any character from ColorSpec and a double specifying the
+%       opacity of the patch. If the color is omitted, the next plot color
+%       is used. Defaults to '0.5'.
+%
+% Parameters:
+%   'PointsLineSpec' is the LineSpec of the points. Leave empty to
+%       disable plotting the points. Defaults to ''.
+%   'VertexLineSpec' is the LineSpec of the vertices. Leave empty to
+%       disable plotting the vertices. Defaults to '.'.
+%   'KeepPlotColor' is a scalar logical that specifies whether to keep the
+%       plot color fixed. If this is true, repeated calls to this function
+%       will draw polygons with the same color. Defaults to false.
 %
 % Returns:
 %   V (Nx2) or Vx, Vy (Nx1) when there are one or more outputs. V contains
 %       the vertices of the convex hull of the points P. These are the
 %       vertices of the polygon displayed.
 %
-% See also: draw_polys, plot_regions
+% See also: draw_polys, plot_regions, get_next_plot_color, ColorSpec
 
 % Process inputs
-[Vx, Vy, Px, Py, params] = parse_inputs(P, varargin{:});
+[Vx, Vy, Px, Py, params] = parse_inputs(points, varargin{:});
 
-% Save previous hold state
-hold_state = get_hold_state;
-hold all
-
-% Detect face color of the patch
-if isempty(params.PatchFaceColor)
-    FaceColor = 'none';
-elseif strcmp(params.PatchFaceColor, '?')
-    FaceColor = get_next_plot_color;
-else
-    FaceColor = params.PatchFaceColor;
+% Use next plot color if none specified by user
+if isempty(params.PatchColor)
+    params.PatchColor = get_next_plot_color();
+    
+    % Cycle to next plot color
+    if ~params.KeepPlotColor
+        cycle_plot_colors()
+    end
 end
 
 % Draw patch!
-patch('XData', Vx, 'YData', Vy, 'FaceColor', FaceColor, 'FaceAlpha', params.PatchFaceAlpha, params.PatchParams)
+patch('XData', Vx, 'YData', Vy, 'FaceColor', params.PatchColor, 'FaceAlpha', params.PatchAlpha, 'EdgeColor', params.PatchColor)
 
-% Plot the original points if linespec is non-empty
-if ~isempty(params.P_LineSpec)
-    plot(Px, Py, params.P_LineSpec)
+% Save previous hold state
+hold_state = get_hold_state();
+hold all
+
+% Plot the original points if LineSpec is non-empty
+if ~isempty(params.PointsLineSpec)
+    ColorParam = {};
+    if params.PointsUsePatchColor; ColorParam = {'Color', params.PatchColor}; end
+    plot(Px, Py, params.PointsLineSpec, ColorParam{:})
+    cycle_plot_colors(-1)
 end
 
-% Plot the convex hull if linespec is non-empty
-if ~isempty(params.V_LineSpec)
-    plot(Vx, Vy, params.V_LineSpec)
+% Plot the vertices if the LineSpec is non-empty
+if ~isempty(params.VertexLineSpec)
+    ColorParam = {};
+    if params.VertexUsePatchColor; ColorParam = {'Color', params.PatchColor}; end
+    plot(Vx, Vy, params.VertexLineSpec, ColorParam{:})
+    cycle_plot_colors(-1)
 end
 
 % Restore previous hold state
 hold(hold_state);
+
+% Output
 if nargout == 2
     varargout = {Vx, Vy};
-elseif nargout >= 1
+elseif nargout < 2
     varargout = {[Vx Vy]};
 end
 end
 
-function [Vx, Vy, Px, Py, params] = parse_inputs(P, varargin)
+function [Vx, Vy, Px, Py, params] = parse_inputs(points, varargin)
 % Create inputParser instance
 p = inputParser;
 p.KeepUnmatched = true;
 
 % Points
-p.addRequired('P_', @(x) validateattributes(x, {'numeric'}, {'2d', 'nonempty'}));
-p.addOptional('Py', @(x) validateattr(x, {'numeric'}, {'vector', 'nonempty'}));
-
-% Patch specifications
-patch_spec_regex = '';
-p.addOptional('PatchSpec', '?0.5', @(x) ischar(x));
-
-% Validate and parse input
-p.parse(P, varargin{:});
-
-% Post-process points
-if isvector(p.Results.P_) && length(p.Results.P_) == length(p.Results.Py)
-    % Ensure Px and Py are column vectors
-    Px = p.Results.P_(:);
-    Py = p.Results.Py(:);
-elseif any(size(p.Results.P_) == 2)
-    P = p.Results.P_;
-    
-    % Ensure P is a vertical matrix
-    if size(P, 2) ~= 2 % P does not have 2 columns iff P has 2 rows
-        P = P';
-    end
-    
-    Px = P(:, 1);
-    Py = P(:, 2);
+if isempty(varargin) || ischar(varargin{1})
+    [Px, Py] = validatepoints(points);
 else
-    error('The points must be specified as a Mx2 or 2xM matrix, or by two Mx1 or 1xM vectors.')
+    [Px, Py] = validatepoints(points, varargin{1});
+    varargin(1) = [];
 end
 
-% Compute convex hull of the set of points
-K = convhull(double(Px), double(Py));
+% Compute convex hull of the set of points to get polygon vertices
+K = convhull(double(Px), double(Py), 'simplify', true);
 Vx = Px(K);
 Vy = Py(K);
 
-% Parse any remaining parameters
-other_params = p.Unmatched;
-
 % Create inputParser instance
-p2 = inputParser;
-p2.KeepUnmatched = true;
+p = inputParser;
 
 % Patch specifications
+ColorPattern = ['[' get_color_names() ']'];
+AlphaPattern = '([01]?[.]\d+|[01])';
+p.addOptional('PatchSpec', '0.5', @(x) instr(x, ColorPattern, 'r') || instr(x, AlphaPattern, 'r'));
 
+% Point and vertex specifications
+p.addParameter('PointsLineSpec', '');
+p.addParameter('VertexLineSpec', '.');
 
-% Line specifications
-p2.addParameter('P_LineSpec', '');
-p2.addParameter('V_LineSpec', 'k*-');
+% Keep plot color
+p.addParameter('KeepPlotColor', false);
 
 % Validate and parse input
-p2.parse(other_params);
-params = p2.Results;
-params.PatchParams = p2.Unmatched;
+p.parse(varargin{:});
+params = p.Results;
 
-% Parse the PatchSpec string
-color_table = ColorSpec;
-short_colors = strjoin(color_table.short_names', '');
-named_tokens = regexpi(params.PatchSpec, ['(?<color>(?:next|[?])?|[' short_colors ']?)(?<alpha>[01]?(?:[.]\d+)?)'], 'names');
-face_color = strrep(named_tokens.color, 'next', '?');
-face_alpha = str2double(named_tokens.alpha);
+% Post-process patch specification
+matches = regexp(params.PatchSpec, {ColorPattern, AlphaPattern}, 'once', 'ignorecase', 'match');
+params.PatchColor = matches{1};
+params.PatchAlpha = str2double(matches{2});
+if isnan(params.PatchAlpha)
+    params.PatchAlpha = 0.5;
+elseif params.PatchAlpha > 1.0
+    params.PatchAlpha = 1.0;
+elseif params.PatchAlpha < 0
+    params.PatchAlpha = 0;
+end
 
-% Defaults
-if isnan(face_alpha); face_alpha = 0.75; end;
-
-% Save to params
-params.PatchFaceColor = face_color;
-params.PatchFaceAlpha = face_alpha;
-
+% Use the same color as the patch to plot the points unless user specifies
+% a color in the LineSpec
+params.PointsUsePatchColor = ~instr(params.PointsLineSpec, ColorPattern, 'r');
+params.VertexUsePatchColor = ~instr(params.VertexLineSpec, ColorPattern, 'r');
 end

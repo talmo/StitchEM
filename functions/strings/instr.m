@@ -1,77 +1,84 @@
 function TF = instr(needle, haystack, flags)
-%INSTR Returns true if needle is in haystack, where either are strings or cell arrays of strings.
+%INSTR Returns true if (any) needle is in (any) haystack.
 %
 % Usage:
 %   TF = instr(needle, haystack)
-%   TF = instr(char, char)
-%   TF = instr(char, cellstr)
-%   TF = instr(cellstr, char)
-%   TF = instr(cellstr, cellstr)
-%   TF = instr(..., flags)
+%   TF = instr(needle, haystack, flags)
 %
 % Args:
-%   needle and haystack are strings or cell strings.
-%   flags can be any combination of:
-%       'i' => Case-insensitive
-%       's' => Matches if needle is a substring of haystack
-%       'r' => Tests regular expressions in needle
-%       'a' => Evaluate ALL needles and returns a vector if more than one
-%       Defaults to 's'.
+%   needle is a string or cell array of strings to look for.
+%   haystack is the string or cell array of strings to look in.
+%   flags indicates the matching mode:
+%       's' => True if needle is a substring of haystack (default)
+%       'r' => True if regexp(needle, haystack) returns a match
+%       'e' => Looks for exact match
 %
-% See also: strcmp, strfind, validatestr
+%       You can combine these with the modifier flags:
+%       'c' => Case-sensitive
+%       'a' => Evaluate ALL needles
+%
+% Returns:
+%   TF logical indicating if needle is in haystack.
+%       If either the needle or the haystack are cell arrays and the 'a'
+%       flag is not set (default), this function returns a scalar
+%       indicating whether ANY needle was found in ANY haystack.
+%
+% See also: strcmp, strfind, validatestr, regexp
 
 % Parse input
-default_flags = 's';
-all_flags = 'isra';
-if ischar(needle) && ischar(haystack); default_flags = 's'; end
-if nargin < 3; flags = default_flags; end
+narginchk(2, 3)
+if nargin < 3; flags = 's'; else flags = lower(flags); end
+valid_flags = 'rseca';
 p = inputParser;
-p.addRequired('s1', @(x) ischar(x) || iscellstr(x));
-p.addRequired('s2', @(x) ischar(x) || iscellstr(x));
-p.addOptional('flags', default_flags, @(x) isempty(x) || (ischar(x) && all(arrayfun(@(c) ~isempty(strfind(all_flags, c)), x))));
-p.parse(needle, haystack, lower(flags));
-needle = p.Results.s1;
-haystack = p.Results.s2;
+p.addRequired('needle', @(x) ischar(x) || iscellstr(x));
+p.addRequired('haystack', @(x) ischar(x) || iscellstr(x));
+p.addOptional('flags', 's', @(x) ischar(x) && all(arrayfun(@(flagchar) any(valid_flags == flagchar), x)));
+p.parse(needle, haystack, flags);
+needle = p.Results.needle;
+haystack = p.Results.haystack;
 flags = p.Results.flags;
 
-% Parse flags
-regex = any(flags == 'r');
+% Matching mode flags
 substr = any(flags == 's');
-case_insensitive = any(flags == 'i');
-return_all = any(flags == 'a');
+regex = any(flags == 'r');
+exact = any(flags == 'e');
 
-% Figure out matching function
-if regex
-    case_sens = 'matchcase'; if case_insensitive; case_sens = 'ignorecase'; end
-    f = @(str, expression) ~cellfun('isempty', regexp(str, expression, case_sens));
-elseif substr
-    if case_insensitive
-        f = @(str, pattern) ~cellfun('isempty', strfind(lower(str), lower(pattern)));
-    else
-        f = @(str, pattern) ~cellfun('isempty', strfind(str, pattern));
-    end
-else
-    if case_insensitive
-        f = @strcmpi;
-    else
-        f = @strcmp;
-    end
-end
+% Modifier flags
+case_sensitive = any(flags == 'c');
+return_all = any(flags == 'a');
 
 % Make sure inputs are cell strings
 if ~iscellstr(needle); needle = {needle}; end
 if ~iscellstr(haystack); haystack = {haystack}; end
 
+% Figure out matching function
+if substr
+    if case_sensitive
+        f = @(str, patterns) any(cellfun(@(pattern) ~isempty(strfind(str, pattern)), patterns));
+    else
+        f = @(str, patterns) any(cellfun(@(pattern) ~isempty(strfind(lower(str), lower(pattern))), patterns));
+    end
+elseif regex
+    case_option = 'ignorecase'; if case_sensitive; case_option = 'matchcase'; end
+    f = @(str, expressions) any(~cellfun('isempty', regexp(str, expressions, case_option)));
+elseif exact
+    if case_sensitive
+        f = @(needle, haystacks) any(strcmp(needle, haystacks));
+    else
+        f = @(needle, haystacks) any(strcmpi(needle, haystacks));
+    end
+end
+
 % Match
 TF = false(size(needle));
 for i = 1:numel(needle)
-    % Look for s1{i} in s2
-    found = any(f(haystack, needle{i}));
+    % Returns true if needle i is in ANY haystack
+    found = f(needle{i}, haystack);
     
-    % Save result
+    % Save result for needle i
     TF(i) = found;
     
-    % Return as soon as we find first match
+    % Return as soon as we find needle
     if ~return_all && found
         TF = true;
         return

@@ -1,8 +1,13 @@
 function bb_out = tform_bb2bb(bb, tform, pixel_res)
-%TFORM_BB2BB Applies a geometric transformation to a bounding box and returns the bounding box of the result.
-% Consistent with imwarp and imref2d behavior.
+%TFORM_BB2BB Applies a geometric transformation to a bounding box and returns the AABB of the result.
+% Usage:
+%   bb_out = tform_bb2bb(bb, tform)
+%   bb_out = tform_bb2bb(bb, tform, pixel_res) % pixel_res = [XRes, YRes]
 %
-% See also: tform_spatial_ref
+% Note: This is consistent with imwarp and imref2d behavior. It adjusts the
+% global X and Y coordinates to get the desired output resolution.
+% 
+% See also: sec_bb, tform_spatial_ref, bb2ref
 
 if nargin < 3
     pixel_res = [1.0, 1.0];

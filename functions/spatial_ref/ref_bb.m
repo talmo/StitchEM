@@ -19,7 +19,7 @@ function varargout = ref_bb(R, which_limits)
 %   V (Mx2) or [Vx, Vy] (both Mx1), the set of vertices of the minimum AABB
 %       (a rectangle/convex polynomial).
 %
-% See also: minaabb, ref_bb, sz2bb, sec_bb
+% See also: bb2ref, sz2bb, sec_bb, minaabb
 
 
 % Parse input

@@ -1,7 +1,13 @@
 function R_out = tform_spatial_ref(R_in, tform)
 %TFORM_SPATIAL_REF Calculates a new spatial reference after a transform.
-
+% Usage:
+%   R_out = tform_spatial_ref(R_in, tform)
+% 
 % From: images.spatialref.internal.applyGeometricTransformToSpatialRef
+%
+% See also: tform_bb2bb
+
+
 %   FOR INTERNAL USE ONLY -- This function is intentionally
 %   undocumented and is intended for use only within other toolbox
 %   classes and functions. Its behavior may change, or the feature

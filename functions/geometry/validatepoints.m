@@ -1,46 +1,45 @@
-function varargout = validatepoints(points, out_format)
-%VALIDATEPOINTS Validates a list of points specified in different formats.
-% Args:
-%   points are the list of points to validate
-%   out_format is a string containing the flags that specify the output
-%       format (see below). Default is 'cm' => column matrix format
-%
-% Returns:
-%   The points in the format specified by out_format (see below).
-%       Throws error if cannot be converted.
-%
-% Format flags:
-%   - out_format must be a combination of a Class, Shape and Other flags.
-%   - These may be specified in any order.
-%
-%   Class (max 1):
-%       'm' = matrix; returns a double array
-%       'v' = vector; returns a 1-D double array for each dimension
-%       'a' = cell array; returns a cell array
-%   Shape (max 1):
-%       'c' = column; column (block) vector => each row is a point
-%       'r' = row; row (block) vector => each column is a point
-%   Other:
-%       'p' = polygon; ensures this is a closed polygonal chain (first point = last point)
-%       'x' = convex; convex hull of the points (implies 'p')
-%       's' = simple; no unnecessary collinear points (implies 'x')
-%       '1' = points are padded with 1
+function [Px, Py] = validatepoints(points, varargin)
+%VALIDATEPOINTS Validates a list of 2-D points and returns them as column vectors.
+% Usage:
+%   [Px, Py] = validatepoints(points)
+%   [Px, Py] = validatepoints(Px, Py)
+%   P = validatepoints(...)
 
-if nargin < 2
-    out_format = 'cm';
+% Create inputParser instance
+p = inputParser;
+
+% Arguments
+p.addRequired('Px', @(x) validateattributes(x, {'numeric'}, {'2d', 'nonempty'}));
+p.addOptional('Py', [], @(x) validateattributes(x, {'numeric'}, {'vector'}));
+
+% Parse
+p.parse(points, varargin{:});
+
+% Format
+if isvector(p.Results.Px) && length(p.Results.Px) == length(p.Results.Py)
+    % Ensure Px and Py are column vectors
+    Px = p.Results.Px(:);
+    Py = p.Results.Py(:);
+    
+elseif any(size(p.Results.Px) == 2)
+    % Matrix of points specified
+    P = p.Results.Px;
+    
+    % Ensure P is a vertical matrix
+    if size(P, 2) ~= 2 % if size(P) = [1, 2] it's still vertical
+        P = P';
+    end
+    
+    % Split into vectors
+    Px = P(:, 1);
+    Py = P(:, 2);
+else
+    error('Points must be specified as a Mx2 or 2xM matrix, or by two Mx1 or 1xM vectors.')
 end
 
-% Process flags
-classes = 'mva';
-shapes = 'cr';
-polys = 'pxs';
-out.class = classes(ismember(classes, lower(out_format)));
-out.shape = shapes(ismember(shapes, lower(out_format)));
-out.poly = polys(find(ismember(polys, lower(out_format)), 1));
-out.pad1 = any(strfind(out_format, '1'));
-
-% Detect input format
-
-
+% Output
+if nargout < 2
+    Px = [Px Py];
+end
 end
 

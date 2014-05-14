@@ -1,5 +1,9 @@
 function state = get_hold_state(ax)
 %GET_HOLD_STATE Returns the state of hold as a string: 'on', 'off' or 'all'.
+% Usage:
+%   state = get_hold_state
+%   state = get_hold_state(ax)
+%
 % Detects the 'all' state, unlike ishold(). Also does not create a new
 % figure if one is not already open.
 %

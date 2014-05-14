@@ -1,37 +1,43 @@
-function varargout = get_next_plot_color(color_format, reset_color)
-%GET_NEXT_PLOT_COLOR Returns the next color that the plot function would use.
+function varargout = get_next_plot_color(color_format)
+%GET_NEXT_PLOT_COLOR Returns the next color that the plot function will use.
+% Usage:
+%   get_next_plot_color()
+%   color = get_next_plot_color()
+%   color = get_next_plot_color(color_format)
+% 
 % Set the color_format to 'rgb', 'long_name', or 'short_name' to return the
-% color in a different format.
-% Defaults to long_name if there are 0 output arguments, otherwise RGB.
-% If reset_color is set to true, repeated calls to this function will
-% return the same color(default = false).
+%   color in a different format. Defaults to long_name if there are 0 
+%   output arguments, otherwise RGB.
+%
+% See also: get_plot_color, get_last_plot_color, cycle_plot_colors
 
+% Parse inputs
 if nargin < 1
-    if nargout == 0
-        color_format = 'long_name';
-    else
-        color_format = 'rgb';
-    end
+    if nargout == 0; color_format = 'long_name'; else color_format = 'rgb'; end
 else
     color_format = validatestring(color_format, {'rgb', 'long_name', 'short_name'});
 end
 
-if nargin < 2
-    reset_color = false;
-end
-
-hold_state = get_hold_state;
+% Store current hold state
+hold_state = get_hold_state();
 hold all
 
-h = plot(NaN, NaN); % Plot a dummy point and save the handle to its object
-rgb_color = get(h, 'Color'); % Get the color from the object properties
-if reset_color
-    h = plot(NaN(2, size(get(gca, 'ColorOrder'), 1) - 1)); % Reset to the previous color by plotting more dummy points
-end
-delete(h); % Delete the dummy points' object
+% Get the number of plot colors
+num_plot_colors = size(get(gca, 'ColorOrder'), 1);
 
-hold(hold_state); % Reset to previous hold state
+% Plot dummy points
+h = plot(NaN(2, num_plot_colors));
 
+% Get color from handle of last object plotted
+rgb_color = get(h(1), 'Color');
+
+% Remove dummy points from plot
+delete(h);
+
+% Reset to previous hold state
+hold(hold_state);
+
+% Convert detected color to specified format
 switch color_format
     case 'rgb'
         color = rgb_color;
@@ -46,7 +52,8 @@ if nargout == 0
     if ~ischar(color) || isempty(color)
         color = mat2str(rgb_color);
     end
-    fprintf('Next color: %s\n', color)
+    color_idx = find(ismember(get(gca, 'ColorOrder'), rgb_color, 'rows'));
+    fprintf('Next plot color: %s (%d/%d)\n', color, color_idx, num_plot_colors);
 else
     varargout = {color};
 end

@@ -20,7 +20,7 @@ if isfield(sec, 'tiles')
         tile_fields = fieldnames(sec.tiles);
     else
         % Remove just tile sets specified
-        valid_tilesets = instr(varargin, fieldnames(sec.tiles), 'ai');
+        valid_tilesets = instr(varargin, fieldnames(sec.tiles), 'a');
         tile_fields = varargin(valid_tilesets);
     end
     

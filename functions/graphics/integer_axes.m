@@ -1,6 +1,9 @@
 function integer_axes(scale)
 %INTEGER_AXES Displays the tickmarks in the current figure as integers.
-
+% Usage:
+%   integer_axes()
+%   integer_axes(scale)
+%
 % ticklabels can be numeric vectors which are converted to strings
 % internally with num2str.
 %

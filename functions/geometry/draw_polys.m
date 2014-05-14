@@ -1,11 +1,15 @@
-function draw_polys(polygons)
-%DRAW_POLYS Draw an array of polygons.
-%   This is a simple wrapper for draw_poly.
-%
+function draw_polys(polygons, varargin)
+%DRAW_POLYS Draw a cell array of polygons.
+% Usage:
+%   draw_polys(polygons)
+%   draw_polys(polygons, ...)
+% 
+% This function accepts the additional parameters as draw_poly.
+% 
 % See also: draw_poly
 
 for i = 1:numel(polygons)
-    draw_poly(polygons{i});
+    draw_poly(polygons{i}, varargin{:});
 end
 
 end
