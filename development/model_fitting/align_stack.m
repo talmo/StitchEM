@@ -2,7 +2,7 @@
 
 %% Parameters
 % Sections to align
-sec_nums = (1:169)';
+sec_nums = (1:5)';
 
 % Defaults: XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
