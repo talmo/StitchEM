@@ -62,22 +62,27 @@ end
 
 function [Vx, Vy, Px, Py, params] = parse_inputs(P, varargin)
 % Create inputParser instance
-p1 = inputParser;
-p1.KeepUnmatched = true;
+p = inputParser;
+p.KeepUnmatched = true;
 
 % Points
-p1.addRequired('P_', @(x) (ismatrix(x) & any(size(x) == 2)) | (isvector(x) & ~isempty(x)));
-p1.addOptional('Py', [], @(x) isvector(x) & ~isempty(x));
+p.addRequired('P_', @(x) validateattributes(x, {'numeric'}, {'2d', 'nonempty'}));
+p.addOptional('Py', @(x) validateattr(x, {'numeric'}, {'vector', 'nonempty'}));
+
+% Patch specifications
+patch_spec_regex = '';
+p.addOptional('PatchSpec', '?0.5', @(x) ischar(x));
 
 % Validate and parse input
-p1.parse(P, varargin{:});
+p.parse(P, varargin{:});
 
-if isvector(p1.Results.P_) && length(p1.Results.P_) == length(p1.Results.Py)
+% Post-process points
+if isvector(p.Results.P_) && length(p.Results.P_) == length(p.Results.Py)
     % Ensure Px and Py are column vectors
-    Px = p1.Results.P_(:);
-    Py = p1.Results.Py(:);
-elseif ismatrix(p1.Results.P_)
-    P = p1.Results.P_;
+    Px = p.Results.P_(:);
+    Py = p.Results.Py(:);
+elseif any(size(p.Results.P_) == 2)
+    P = p.Results.P_;
     
     % Ensure P is a vertical matrix
     if size(P, 2) ~= 2 % P does not have 2 columns iff P has 2 rows
@@ -96,14 +101,14 @@ Vx = Px(K);
 Vy = Py(K);
 
 % Parse any remaining parameters
-other_params = p1.Unmatched;
+other_params = p.Unmatched;
 
 % Create inputParser instance
 p2 = inputParser;
 p2.KeepUnmatched = true;
 
 % Patch specifications
-p2.addOptional('PatchSpec', '?0.5', @(x) ischar(x) & ~strcmp(x, 'P_LineSpec') & ~strcmp(x, 'V_LineSpec'));
+
 
 % Line specifications
 p2.addParameter('P_LineSpec', '');
