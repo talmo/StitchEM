@@ -73,9 +73,9 @@ end
 hold(hold_state);
 
 % Output
-if nargout == 2
+if nargout > 1
     varargout = {Vx, Vy};
-elseif nargout < 2
+elseif nargout == 1
     varargout = {[Vx Vy]};
 end
 end
