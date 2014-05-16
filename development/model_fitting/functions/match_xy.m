@@ -69,6 +69,7 @@ end
 matches.match_sets = match_sets;
 matches.tile_idx = match_idx;
 matches.feature_set = params.feature_set;
+matches.base_alignment = features.alignment;
 matches.num_matches = num_matches;
 matches.sec = sec.num;
 
