@@ -2,16 +2,18 @@ function z_matches = match_z_gmm(secA, secB, varargin)
 %MATCH_Z_GMM Finds Z matches between two sections and filters using GMM.
 % Usage:
 %   z_matches = match_z(secA, secB)
+%   z_matches = match_z(secA, secB, feature_setA, feature_setB)
 
 % Process parameters
-[params, unmatched_params] = parse_input(varargin{:});
+[params, unmatched_params] = parse_input(fieldnames(secA.features), fieldnames(secB.features), varargin{:});
 
 if params.verbosity > 0; fprintf('== Matching Z features between sections %d and %d (GMM)\n', secA.num, secB.num); end
 total_time = tic;
 
 % Feature sets
-featuresA = secA.features.z;
-featuresB = secB.features.rough_z;
+featuresA = secA.features.(params.feature_setA);
+featuresB = secB.features.(params.feature_setB);
+if params.verbosity > 0; fprintf('Matching feature sets: sec %d -> ''%s'' to sec %d -> ''%s''.\n', secB.num, params.feature_setB, secA.num, params.feature_setA); end
 
 % Find matches between pairs of tiles using NNR
 match_sets = cell(secA.num_tiles, secB.num_tiles);
@@ -89,10 +91,23 @@ k = fit.cluster(D);
 D1 = D(k == 1, :);
 D2 = D(k == 2, :);
 
-% Find cluster with smallest error
-D1_norm = rownorm2(D1);
-D2_norm = rownorm2(D2);
-k_inliers = 1; if D1_norm > D2_norm; k_inliers = 2; end
+% Choose inlier cluster
+switch params.inlier_cluster
+    case 'smallest_error'
+        % Select the cluster with smallest error as inliers
+        D1_norm = rownorm2(D1);
+        D2_norm = rownorm2(D2);
+        k_inliers = 1; if D1_norm > D2_norm; k_inliers = 2; end
+    case 'geomedian'
+        % Select the cluster that's closest to the overall geometric median
+        D_geomedian = geomedian(D);
+        D1_geomedian = geomedian(D1);
+        D2_geomedian = geomedian(D2);
+        k_inliers = 1;
+        if norm(D1_geomedian - D_geomedian) > norm(D2_geomedian - D_geomedian)
+            k_inliers = 2;
+        end
+end
 
 % Keep just the inliers from NNR matching step
 z_matches.A = nnr_matches.A(k == k_inliers, :);
@@ -104,19 +119,34 @@ z_matches.meta.avg_error = rownorm2(z_matches.B.global_points - z_matches.A.glob
 z_matches.meta.avg_nnr_error = rownorm2(D);
 z_matches.meta.num_nnr_matches = height(nnr_matches.A);
 z_matches.meta.all_displacements = D;
+z_matches.meta.secA = secA.num;
+z_matches.meta.feature_setA = params.feature_setA;
+z_matches.meta.alignmentA = featuresA.meta.base_alignment;
+z_matches.meta.secB = secB.num;
+z_matches.meta.feature_setB = params.feature_setB;
+z_matches.meta.alignmentB = featuresB.meta.base_alignment;
+z_matches.meta.inlier_clustering_method = params.inlier_cluster;
 
 if params.verbosity > 0; fprintf('Found %d matches. Error: <strong>%fpx / match</strong>. [%.2fs]\n', z_matches.num_matches, z_matches.meta.avg_error, toc(total_time)); end
 
 end
 
-function [params, unmatched] = parse_input(varargin)
+function [params, unmatched] = parse_input(feature_setsA, feature_setsB, varargin)
 
 % Create inputParser instance
 p = inputParser;
 p.KeepUnmatched = true;
 
+% Feature sets to use
+p.addOptional('feature_setA', feature_setsA{end}, @(x) validatestr(x, feature_setsA));
+p.addOptional('feature_setB', feature_setsB{end}, @(x) validatestr(x, feature_setsB));
+
 % Columns to keep for the matched features
 p.addParameter('keep_cols', {'local_points', 'global_points'});
+
+% Criteria for establishing cluster as inliers
+inlier_clustering_methods = {'smallest_error', 'geomedian'};
+p.addParameter('inlier_cluster', 'geomedian', @(x) validatestring(x, inlier_clustering_methods));
 
 % Verbosity
 p.addParameter('verbosity', 1);

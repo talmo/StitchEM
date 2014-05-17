@@ -28,7 +28,7 @@ for w = warnings(:)'
     warning(warning_state, w{1})
     
     % Parallel
-    if matlabpool('size')
+    if ~isempty(gcp('nocreate'))
         pctRunOnAll(['warning(''' warning_state ''', ''' w{1} ''')'])
     end
 end

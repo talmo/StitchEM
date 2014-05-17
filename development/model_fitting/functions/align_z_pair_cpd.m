@@ -1,9 +1,13 @@
-function alignmentB = align_z_pair_cpd(secB, z_matches)
+function alignmentB = align_z_pair_cpd(secB, z_matches, base_alignment)
 %ALIGN_Z_PAIR_CPD Produces a Z alignment using Coherent Point Drift.
 % Usage:
 %   alignmentB = align_z_pair_cpd(secA, secB, z_matches)
+%   alignmentB = align_z_pair_cpd(secA, secB, z_matches, base_alignment)
 
-base_alignment = 'rough_z';
+if nargin < 3
+    alignments = fieldnames(secB.alignments);
+    base_alignment = alignments{end};
+end
 
 total_time = tic;
 fprintf('== Aligning section %d in Z (CPD)\n', secB.num)
