@@ -127,7 +127,7 @@ z_matches.meta.feature_setB = params.feature_setB;
 z_matches.meta.alignmentB = featuresB.meta.base_alignment;
 z_matches.meta.inlier_clustering_method = params.inlier_cluster;
 
-if params.verbosity > 0; fprintf('Found %d matches. Error: <strong>%fpx / match</strong>. [%.2fs]\n', z_matches.num_matches, z_matches.meta.avg_error, toc(total_time)); end
+if params.verbosity > 0; fprintf('Found %d matches. Error before alignment: <strong>%fpx / match</strong>. [%.2fs]\n', z_matches.num_matches, z_matches.meta.avg_error, toc(total_time)); end
 
 end
 

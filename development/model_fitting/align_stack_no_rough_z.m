@@ -23,7 +23,7 @@ default.z.matching.inlier_cluster = 'geomedian';
 % Alignment
 default.z.alignment_method = 'cpd'; % 'lsq' or 'cpd'
 % Quality control checks
-default.z.max_match_error = inf; % avg error after Z matching
+default.z.max_match_error = 1000; % avg error after Z matching
 default.z.max_aligned_error = 50; % avg error after alignment
 
 % Initialize parameters with defaults
@@ -32,8 +32,12 @@ for s=1:length(sec_nums); params(s) = default; end
 % Custom per-section parameters
 % Exampple:
 % params(38).z.NNR.MaxRatio = 0.8;
-%params(26).z.max_match_error = 1200;
 
+% Section 72 is rotated by quite a bit, but 73 goes back to normal
+params(72).z.max_match_error = inf;
+params(72).z.max_aligned_error = inf;
+params(73).z.max_match_error = inf;
+params(73).z.max_aligned_error = inf;
 %% Rough & XY Alignment
 xy_time = tic;
 disp('==== <strong>Started XY alignment</strong>.')
@@ -78,6 +82,8 @@ save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end
 
 fprintf('==== <strong>Finished XY alignment in %.2fs</strong>.\n\n', toc(xy_time));
 %% Z Alignment
+if ~exist('params', 'var'); error('The ''params'' variable does not exist. Load parameters before doing Z alignment.'); end
+
 z_time = tic;
 disp('==== <strong>Started Z alignment</strong>.')
 
@@ -95,14 +101,16 @@ for s = start_at_sec:length(secs)
     
     % Keep first section fixed
     if s == 1
-        disp('Keeping section fixed with respect to XY alignment.')
-        alignment.tforms = secs{1}.alignments.xy.tforms;
-        alignment.rel_tforms = repmat({affine2d()}, size(alignment.tforms));
-        alignment.rel_to = 'xy';
-        alignment.meta.method = 'fixed';
-        alignment.meta.avg_prior_error = NaN;
-        alignment.meta.avg_post_error = NaN;
-        secs{1}.alignments.z = alignment;
+%         disp('Keeping section fixed with respect to XY alignment.')
+%         alignment.tforms = secs{1}.alignments.xy.tforms;
+%         alignment.rel_tforms = repmat({affine2d()}, size(alignment.tforms));
+%         alignment.rel_to = 'xy';
+%         alignment.meta.method = 'fixed';
+%         alignment.meta.avg_prior_error = NaN;
+%         alignment.meta.avg_post_error = NaN;
+%         secs{1}.alignments.z = alignment;
+        
+        secs{1}.alignments.z = fixed_alignment(secs{1}, 'xy');
         continue
     end
     
@@ -110,25 +118,31 @@ for s = start_at_sec:length(secs)
     secA = secs{s - 1};
     secB = secs{s};
     
-    % Load images
+    % Load tile images
     if ~isfield(secA.tiles, 'z') || secA.tiles.z.scale ~= z.scale; secA = load_tileset(secA, 'z', z.scale); end
     if ~isfield(secB.tiles, 'z') || secB.tiles.z.scale ~= z.scale; secB = load_tileset(secB, 'z', z.scale); end
     
     % Compose with previous Z alignment
-    rel_to_alignments = {'prev_z', 'z'}; % which alignments on previous section
-    base_alignment = 'xy'; % which alignment on this section
-    secB.alignments.prev_z.rel_to_sec = secA.num;
-    secB.alignments.prev_z.rel_to_alignments = rel_to_alignments;
-    rel_tforms = repmat({affine2d()}, size(secB.alignments.(base_alignment).tforms));
-    for i = 1:numel(rel_to_alignments)
-        rel_alignment = rel_to_alignments{i};
-        if isfield(secA.alignments, rel_alignment)
-            rel_tforms = compose_tforms(rel_tforms, secA.alignments.(rel_alignment).rel_tforms);
-        end
+    rel_alignments = {'prev_z', 'z'};
+    if secA.num == 1
+        rel_alignments = 'z'; % first section has no previous Z alignment
     end
-    secB.alignments.prev_z.rel_tforms = rel_tforms;
-    secB.alignments.prev_z.rel_to = base_alignment;
-    secB.alignments.prev_z.tforms = compose_tforms(secB.alignments.(base_alignment).tforms, rel_tforms);
+    secB.alignments.prev_z = compose_alignments(secA, rel_alignments, secB, 'xy');
+    
+%     rel_to_alignments = {'prev_z', 'z'}; % which alignments on previous section
+%     base_alignment = 'xy'; % which alignment on this section
+%     secB.alignments.prev_z.rel_to_sec = secA.num;
+%     secB.alignments.prev_z.rel_to_alignments = rel_to_alignments;
+%     rel_tforms = repmat({affine2d()}, size(secB.alignments.(base_alignment).tforms));
+%     for i = 1:numel(rel_to_alignments)
+%         rel_alignment = rel_to_alignments{i};
+%         if isfield(secA.alignments, rel_alignment)
+%             rel_tforms = compose_tforms(rel_tforms, secA.alignments.(rel_alignment).rel_tforms);
+%         end
+%     end
+%     secB.alignments.prev_z.rel_tforms = rel_tforms;
+%     secB.alignments.prev_z.rel_to = base_alignment;
+%     secB.alignments.prev_z.tforms = compose_tforms(secB.alignments.(base_alignment).tforms, rel_tforms);
     
     % Detect features in overlapping regions
     secA.features.base_z = detect_features(secA, 'regions', sec_bb(secB, 'prev_z'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
@@ -139,7 +153,7 @@ for s = start_at_sec:length(secs)
     
     % Check for bad matching
     if secB.z_matches.meta.avg_error > z.max_match_error
-        error('[sec %d/%d]: Error after matching is too large for good alignment. There are probably too many outliers.', s, length(secs))
+        error('[sec %d/%d]: Error after matching is very large. This may be because the two sections are misaligned by a large rotation/translation or due to bad matching.', s, length(secs))
     end
     
     % Align
@@ -150,12 +164,12 @@ for s = start_at_sec:length(secs)
         
         case 'cpd'
             % Coherent Point Drift
-            secB.alignments.z = align_z_pair_cpd(secB, secB.z_matches, 'prev_z');
+            secB.alignments.z = align_z_pair_cpd(secB);
     end
     
     % Check for bad alignment
     if secB.alignments.z.meta.avg_post_error > z.max_aligned_error
-        error('[sec %d/%d]: Error after alignment is too large for good alignment. Check Z matches.', s, length(secs))
+        error('[sec %d/%d]: Error after alignment is very large. This may be because the two sections are misaligned by a large rotation/translation or due to bad matching.', s, length(secs))
     end
     
     % Clear tile images and features to save memory
@@ -182,7 +196,7 @@ render_region
 
 return
 %% Troubleshooting
-s = 2;
+s = 72;
 secA = secs{s - 1};
 secB = secs{s};
 
@@ -204,10 +218,12 @@ plot_features(pointsB)
 plot_section(secA, 'z', 'r0.1')
 plot_section(secB, 'prev_z', 'g0.1')
 plot_matches(secB.z_matches.A, secB.z_matches.B)
-title(sprintf('Matches (secs %d <-> %d) | Error: %fpx / match', secA.num, secB.num, secB.z_matches.meta.avg_error))
+title(sprintf('Matches (secs %d <-> %d) | Error: %fpx / match | n = %d matches', secA.num, secB.num, secB.z_matches.meta.avg_error, secB.z_matches.num_matches))
 
 %% Troubleshooting: Plot displacements
+% All displacements
 plot_displacements(secB.z_matches.meta.all_displacements), hold on
+% Inlier displacements
 displacements = secB.z_matches.B.global_points - secB.z_matches.A.global_points;
 scatter(displacements(:,1), displacements(:,2), 'gx')
 title(sprintf('Displacements (secs %d <-> %d) | Error: %fpx / match | n = %d -> %d after filtering', secA.num, secB.num, secB.z_matches.meta.avg_error, length(secB.z_matches.meta.all_displacements), secB.z_matches.num_matches))

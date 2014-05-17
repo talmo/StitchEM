@@ -5,7 +5,7 @@ data = table();
 data.sec = (secs{2}.num:secs{end}.num)';
 data.prior_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_prior_error, secs(2:end));
 data.post_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_post_error, secs(2:end));
-data.change = post_errors - prior_errors;
+data.change = data.post_errors - data.prior_errors;
 data.num_matches = cellfun(@(sec) sec.z_matches.num_matches, secs(2:end));
 
 %% Plot errors
@@ -16,7 +16,7 @@ xlabel('Section'), ylabel('Average error (px / match)')
 axis tight
 
 figure
-hist(data.post_errors)
+hist(data.post_errors, 30)
 title('Distribution of average error after Z alignment')
 xlabel('Average error (px / match)'), ylabel('Frequency')
 axis tight
@@ -34,7 +34,7 @@ figure
 plot(data.num_matches, data.post_errors, 'ko', 'MarkerFaceColor', 'k')
 grid on
 xlabel('Number of matches'), ylabel('Average error (px / match)')
-title({'\bfCorrelation between number of matches and average error\rm',
+title({'\bfCorrelation between number of matches and average error\rm';
     sprintf('Spearman''s rho = %.2f (p = %.3f) | Pearson''s rho = %.2f (p = %.3f) | n = %d sections', spearman_rho, spearman_p, pearson_rho, pearson_p, height(data))});
 
 %% Hypothesis: Do errors propagate across sections?
@@ -44,5 +44,15 @@ figure
 plot(data.sec, data.post_errors, 'ko', 'MarkerFaceColor', 'k')
 grid on
 xlabel('Section number'), ylabel('Average error (px / match)')
-title({'\bfCorrelation between section number and average error\rm',
+title({'\bfCorrelation between section number and average error\rm';
+    sprintf('Spearman''s rho = %.2f (p = %.3f) | Pearson''s rho = %.2f (p = %.3f) | n = %d sections', spearman_rho, spearman_p, pearson_rho, pearson_p, height(data))});
+
+%% Hypothesis: Is the prior error correlated with post error?
+[spearman_rho, spearman_p] = corr(data.prior_errors, data.post_errors, 'type', 'spearman');
+[pearson_rho, pearson_p] = corr(data.prior_errors, data.post_errors, 'type', 'pearson');
+figure
+plot(data.prior_errors, data.post_errors, 'ko', 'MarkerFaceColor', 'k')
+grid on
+xlabel('Average pre-alignment error (px / match)'), ylabel('Average post-alignment error (px / match)')
+title({'\bfCorrelation between error before and after alignment\rm';
     sprintf('Spearman''s rho = %.2f (p = %.3f) | Pearson''s rho = %.2f (p = %.3f) | n = %d sections', spearman_rho, spearman_p, pearson_rho, pearson_p, height(data))});

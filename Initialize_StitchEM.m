@@ -16,5 +16,5 @@ waferpath('/data/home/talmo/EMdata/S2-W003');
 
 cd('development/model_fitting');
 addpath(pwd);
-addpath('functions');
-addpath(genpath('CPD2'));
+addpath(fullfile(pwd, 'functions'));
+addpath(genpath(fullfile(pwd, 'CPD2')));

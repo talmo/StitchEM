@@ -1,22 +1,22 @@
 % Stack
-%secs = {secA, secB};
-%alignment = {'xy', 'z_cpd'};
-
 alignment = 'z';
-
-% Clear any loaded images to save memory
-%secs = cellfun(@imclear_sec, secs, 'UniformOutput', false);
 
 % Region to render
 regionJ = [19000 20000]; % X
 regionI = [13000 14000]; % Y
-viz = false; % Draw region
+viz = false; % Visualize region
 
 % Output folder
-%stack_name = sprintf('sec%d-%d (%s) [%d,%d]', secs{1}.num, secs{end}.num, alignments{end}, regionI(1), regionJ(1));
-stack_name = sprintf('sec%d-%d (%s) [%d,%d]', secs{1}.num, secs{end}.num, z.alignment_method, regionI(1), regionJ(1));
+stack_name = sprintf('sec%d-%d_[%d,%d]', secs{1}.num, secs{end}.num, z.alignment_method, regionI(1), regionJ(1));
+
+% Make sure we don't save into an existing folder
 output_folder = GetFullPath(['renders' filesep stack_name]);
-if ~exist(output_folder, 'dir'); mkdir(output_folder); end
+folder_num = 0;
+while exist(output_folder, 'dir')
+    folder_num = folder_num + 1;
+    output_folder = GetFullPath(['renders' filesep stack_name '(' num2str(folder_num) ')']);
+end
+mkdir(output_folder);
 
 %% Calculate spatial references
 total_render_time = tic;

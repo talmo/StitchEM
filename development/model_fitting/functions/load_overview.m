@@ -1,7 +1,7 @@
 function sec = load_overview(sec, scale)
-%LOAD_OVERVIEW Loads a tile set at the specified scale.
+%LOAD_OVERVIEW Loads the overview image of a section at the specified scale.
 % Usage:
-%   sec = load_tileset(sec, scale_name, scale)
+%   sec = load_overview(sec, scale)
 
 load_time = tic;
 

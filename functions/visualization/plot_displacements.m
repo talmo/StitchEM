@@ -17,6 +17,7 @@ M = geomedian(displacements);
 
 % Plot
 scatter(displacements(:,1), displacements(:,2), 'ko')
+axis equal
 hold on, grid on
 plot(M(1), M(2), 'r*')
 title('Displacements')
