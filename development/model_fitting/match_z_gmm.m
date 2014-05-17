@@ -146,7 +146,7 @@ p.addParameter('keep_cols', {'local_points', 'global_points'});
 
 % Criteria for establishing cluster as inliers
 inlier_clustering_methods = {'smallest_error', 'geomedian'};
-p.addParameter('inlier_cluster', 'geomedian', @(x) validatestring(x, inlier_clustering_methods));
+p.addParameter('inlier_cluster', 'geomedian', @(x) validatestr(x, inlier_clustering_methods));
 
 % Verbosity
 p.addParameter('verbosity', 1);

@@ -88,6 +88,7 @@ start_at_sec = max(1, stopped_at);
 % Align section pairs
 for s = start_at_sec:length(secs)
     fprintf('=== Aligning section %d (<strong>%d/%d</strong>) in Z\n', secs{s}.num, s, length(secs))
+    stopped_at = s;
     
     % Parameters
     z = params(s).z;
@@ -95,7 +96,13 @@ for s = start_at_sec:length(secs)
     % Keep first section fixed
     if s == 1
         disp('Keeping section fixed with respect to XY alignment.')
-        secs{s}.alignments.z = secs{s}.alignments.xy;
+        alignment.tforms = secs{1}.alignments.xy.tforms;
+        alignment.rel_tforms = repmat({affine2d()}, size(alignment.tforms));
+        alignment.rel_to = 'xy';
+        alignment.meta.method = 'fixed';
+        alignment.meta.avg_prior_error = NaN;
+        alignment.meta.avg_post_error = NaN;
+        secs{1}.alignments.z = alignment;
         continue
     end
     
@@ -132,7 +139,6 @@ for s = start_at_sec:length(secs)
     
     % Check for bad matching
     if secB.z_matches.meta.avg_error > z.max_match_error
-        stopped_at = s;
         error('[sec %d/%d]: Error after matching is too large for good alignment. There are probably too many outliers.', s, length(secs))
     end
     
@@ -149,7 +155,6 @@ for s = start_at_sec:length(secs)
     
     % Check for bad alignment
     if secB.alignments.z.meta.avg_post_error > z.max_aligned_error
-        stopped_at = s;
         error('[sec %d/%d]: Error after alignment is too large for good alignment. Check Z matches.', s, length(secs))
     end
     
