@@ -1,15 +1,24 @@
-function alignmentB = align_z_pair_lsq(secB, z_matches)
+function alignmentB = align_z_pair_lsq(secB, z_matches, base_alignment)
 %ALIGN_Z_PAIR_LSQ Produces a Z alignment using least squares.
 % Usage:
 %   alignmentB = align_z_pair_lsq(secB, z_matches)
 
-base_alignment = 'rough_z';
+if nargin < 2
+    z_matches = secB.z_matches;
+end
+if nargin < 3
+    base_alignment = z_matches.meta.alignmentB;
+end
 
 total_time = tic;
-fprintf('== Aligning section %d to %d (LSQ)\n', z_matches.secB, z_matches.secA)
+fprintf('== Aligning section %d in Z (LSQ)\n', secB.num)
 
-% Merge matches into a single table
-matches = merge_match_sets(z_matches);
+% Merge matches into a single table (legacy)
+if isfield(z_matches, 'match_sets')
+    matches = merge_match_sets(z_matches);
+else
+    matches = z_matches;
+end
 
 % Solve using least squares
 % Ax = B -> x = A \ B

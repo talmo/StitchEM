@@ -6,15 +6,18 @@ regionJ = [19000 20000]; % X
 regionI = [13000 14000]; % Y
 viz = false; % Visualize region
 
-% Output folder
-stack_name = sprintf('sec%d-%d_[%d,%d]', secs{1}.num, secs{end}.num, z.alignment_method, regionI(1), regionJ(1));
+% Name of output folder
+stack_name = '0.25x';
 
+%% Create output directory
 % Make sure we don't save into an existing folder
-output_folder = GetFullPath(['renders' filesep stack_name]);
-folder_num = 0;
+base_dir = GetFullPath(['renders' filesep sprintf('%s_secs%d-%d_z_aligned[%d,%d]', secs{1}.wafer, secs{1}.num, secs{end}.num, regionI(1), regionJ(1))]);
+if ~exist(base_dir, 'dir'); mkdir(base_dir); end
+output_folder = [base_dir filesep stack_name];
+folder_num = 1;
 while exist(output_folder, 'dir')
     folder_num = folder_num + 1;
-    output_folder = GetFullPath(['renders' filesep stack_name '(' num2str(folder_num) ')']);
+    output_folder = [base_dir filesep stack_name ' (' num2str(folder_num) ')'];
 end
 mkdir(output_folder);
 
