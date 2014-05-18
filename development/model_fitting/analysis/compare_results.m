@@ -1,7 +1,7 @@
 %% Load data sets
-experimental = 'sp_lsq_z';
-control = 'lsq';
-%control = 'control-(0.125x,gmm,geomedian-inliers,cpd)';
+experimental = 'lsq';
+%control = '0.25x';
+control = 'control-(0.125x,gmm,geomedian-inliers,cpd)';
 
 A = readtable(['W003-sec1-100-(no_rough_z)/' experimental '.csv']);
 B = readtable(['W003-sec1-100-(no_rough_z)/' control '.csv']);

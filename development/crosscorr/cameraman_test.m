@@ -1,6 +1,6 @@
 %% Configuration
-true_theta = 6;
-true_offset = [30, 70];
+true_theta = 45;
+true_offset = [0, 0];
 true_tform = compose_tforms(make_tform('rotate', true_theta), make_tform('translate', true_offset));
 
 % Load and transform image

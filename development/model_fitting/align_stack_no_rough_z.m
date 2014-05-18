@@ -2,7 +2,7 @@
 
 %% Parameters
 % Sections to align
-sec_nums = (1:100)';
+sec_nums = [(2:18)'; (20:149)'];
 
 % Defaults: XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
@@ -10,14 +10,14 @@ default.xy.SURF.MetricThreshold = 11000; % for full res tiles
 
 % Defaults: Z alignment
 % Tile scaling: 0.125x
-%default.z.scale = 0.125;
-%default.z.SURF.MetricThreshold = 2000;
+default.z.scale = 0.125;
+default.z.SURF.MetricThreshold = 2000;
 % Tile scaling: 0.25x
 % default.z.scale = 0.25;
 % default.z.SURF.MetricThreshold = 7500;
 % Tile scaling: 0.45x
-default.z.scale = 0.45;
-default.z.SURF.MetricThreshold = 15000;
+%default.z.scale = 0.45;
+%default.z.SURF.MetricThreshold = 15000;
 % Matching: NNR
 default.z.matching.MaxRatio = 0.6;
 default.z.matching.MatchThreshold = 1.0;
@@ -30,28 +30,43 @@ default.z.max_match_error = 1000; % avg error after Z matching
 default.z.max_aligned_error = 50; % avg error after alignment
 
 % Initialize parameters with defaults
-for s=1:length(sec_nums); params(s) = default; end
+for s=min(sec_nums):max(sec_nums); params(s) = default; end
 
 % Custom per-section parameters
-% Exampple:
+% Example:
 % params(38).z.NNR.MaxRatio = 0.8;
 
+% S2-W002:
+% Bad rotation in section 1:
+%params(2).z.max_match_error = inf;
+%params(2).z.max_aligned_error = inf;
+% Bad statining in sections 16-21:
+for s = 15:22
+    params(s).z.max_match_error = inf;
+    params(s).z.max_aligned_error = inf;
+end
+% Bad rotation in section 88:
+params(88).z.max_match_error = inf;
+params(88).z.max_aligned_error = inf;
+params(89).z.max_match_error = inf;
+params(89).z.max_aligned_error = inf;
+
+
+% S2-W003:
 % Section 72 is rotated by quite a bit, but 73 goes back to normal
-params(72).z.max_match_error = inf;
-params(72).z.max_aligned_error = inf;
-params(73).z.max_match_error = inf;
-params(73).z.max_aligned_error = inf;
+%params(72).z.max_match_error = inf;
+%params(72).z.max_aligned_error = inf;
+%params(73).z.max_match_error = inf;
+%params(73).z.max_aligned_error = inf;
 %% Rough & XY Alignment
 xy_time = tic;
 disp('==== <strong>Started XY alignment</strong>.')
-if ~exist('stopped_at', 'var'); stopped_at = NaN; end
-start_at_sec = max(1, stopped_at);
 secs = cell(size(sec_nums));
-for s = start_at_sec:length(secs)
+for s = 1:length(secs)
     fprintf('=== Aligning section %d (<strong>%d/%d</strong>) in XY\n', sec_nums(s), s, length(secs))
     
     % Parameters
-    xy = params(s).xy;
+    xy = params(sec_nums(s)).xy;
     
     % Load section
     sec = load_section(sec_nums(s), 'scales', xy.scales);
@@ -100,7 +115,7 @@ for s = start_at_sec:length(secs)
     stopped_at = s;
     
     % Parameters
-    z = params(s).z;
+    z = params(sec_nums(s)).z;
     
     % Keep first section fixed
     if s == 1
@@ -167,10 +182,11 @@ secs{end} = imclear_sec(secs{end});
 % Save to cache
 disp('=== Saving sections to disk.');
 %save(sprintf('%s_secs%d-%d_z_aligned_lsq_0.125x.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
-save('0.45x.mat', secs)
+save('control.mat', 'secs', '-v7.3')
 
 fprintf('==== <strong>Finished Z alignment in %.2fs</strong>.\n\n', toc(z_time));
 
+return
 %% Render
 render_region
 

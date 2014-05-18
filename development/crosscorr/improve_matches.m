@@ -42,6 +42,37 @@ title('Matches on tile 1')
 figure
 plot_displacements(D1)
 
+%% Load tile images
+tileA1 = imload_tile(secA.num, 1);
+tileB1 = imload_tile(secB.num, 1);
+disp('Loaded tiles.')
+
+%% Improve accuracy with cpcorr
+% this won't work because the tiles are rotated, need to apply tform first?
+B1_local_corr = cpcorr2(B1.local_points, A1.local_points, tileB1, tileA1);
+
+base_tformB = secB.alignments.prev_z.tforms{1};
+B1_global_corr = base_tformB.transformPointsForward(B1_pts_corr);
+prior_error = rownorm2(B1.global_points - A1.global_points);
+post_error = rownorm2( - A1.global_points);
+
+fprintf('cpcorr: %f -> %f px / match before alignment\n', prior_error, post_error)
+
+tile1_matches.A = A1;
+tile1_matches.B = B1;
+tile1_matches.num_matches= height(A1);
+tile1_matches.meta.alignmentB = 'prev_z';
+
+tile1_matches_corr = tile1_matches;
+tile1_matches_corr.B.local_points = B1_local_corr;
+tile1_matches_corr.B.global_points = B1_global_corr;
+
+non_corr_lsq = align_z_pair_lsq(secB, tile1_matches);
+corr_lsq = align_z_pair_lsq(secB, tile1_matches_corr);
+
+non_corr_cpd = align_z_pair_cpd(secB, tile1_matches);
+corr_cpd = align_z_pair_cpd(secB, tile1_matches_corr);
+
 %% Pick a single match to work with
 i = 24;
 matchA = A1(i, :);
@@ -55,7 +86,7 @@ figure
 plot_tile(secA, 1, 'z')
 plot_tile(secB, 1, 'prev_z')
 plot_matches(matchA, matchB)
-title('Matches on tile 1')
+title('Match on tile 1')
 
 %% Extract image region around matches
 

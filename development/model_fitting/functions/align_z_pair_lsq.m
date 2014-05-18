@@ -1,7 +1,9 @@
 function alignmentB = align_z_pair_lsq(secB, z_matches, base_alignment)
 %ALIGN_Z_PAIR_LSQ Produces a Z alignment using least squares.
 % Usage:
+%   alignmentB = align_z_pair_lsq(secB)
 %   alignmentB = align_z_pair_lsq(secB, z_matches)
+%   alignmentB = align_z_pair_lsq(secB, z_matches, base_alignment)
 
 if nargin < 2
     z_matches = secB.z_matches;
