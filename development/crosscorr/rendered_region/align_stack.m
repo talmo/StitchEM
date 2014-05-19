@@ -1,6 +1,6 @@
 %% Parameters
 sec_nums = 1:100;
-base_folder = 'lsq';
+base_folder = '0.45x,lsq';
 
 %% Align
 rel_tforms = cell(length(sec_nums), 1);
@@ -25,7 +25,7 @@ for s = 1:length(sec_nums)
     B = imread(sprintf('%s/S2-W003_Sec%d_Montage.tif', base_folder, sec_nums(s)));
     
     % Find matches
-    [ptsA, ptsB] = xcorr_match(A, B, 'grid_sz', [100, 100], 'block_sz', [200, 200]);
+    [ptsA, ptsB] = xcorr_match(A, B, 'grid_sz', [100, 100], 'block_sz', [150, 150]);
     
     % Filter matches
     [ptsA, ptsB] = gmm_filter(ptsA, ptsB);

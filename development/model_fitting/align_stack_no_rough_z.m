@@ -2,7 +2,7 @@
 
 %% Parameters
 % Sections to align
-sec_nums = [(2:18)'; (20:149)'];
+sec_nums = 1:169;
 
 % Defaults: XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
@@ -41,23 +41,24 @@ for s=min(sec_nums):max(sec_nums); params(s) = default; end
 %params(2).z.max_match_error = inf;
 %params(2).z.max_aligned_error = inf;
 % Bad statining in sections 16-21:
-for s = 15:22
-    params(s).z.max_match_error = inf;
-    params(s).z.max_aligned_error = inf;
-end
-% Bad rotation in section 88:
-params(88).z.max_match_error = inf;
-params(88).z.max_aligned_error = inf;
-params(89).z.max_match_error = inf;
-params(89).z.max_aligned_error = inf;
+% for s = 15:22
+%     params(s).z.max_match_error = inf;
+%     params(s).z.max_aligned_error = inf;
+% end
+% % Bad rotation in section 88:
+% params(88).z.max_match_error = inf;
+% params(88).z.max_aligned_error = inf;
+% params(89).z.max_match_error = inf;
+% params(89).z.max_aligned_error = inf;
 
 
 % S2-W003:
 % Section 72 is rotated by quite a bit, but 73 goes back to normal
-%params(72).z.max_match_error = inf;
-%params(72).z.max_aligned_error = inf;
-%params(73).z.max_match_error = inf;
-%params(73).z.max_aligned_error = inf;
+params(72).z.max_match_error = inf;
+params(72).z.max_aligned_error = inf;
+params(73).z.max_match_error = inf;
+params(73).z.max_aligned_error = inf;
+
 %% Rough & XY Alignment
 xy_time = tic;
 disp('==== <strong>Started XY alignment</strong>.')
@@ -182,7 +183,8 @@ secs{end} = imclear_sec(secs{end});
 % Save to cache
 disp('=== Saving sections to disk.');
 %save(sprintf('%s_secs%d-%d_z_aligned_lsq_0.125x.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
-save('control.mat', 'secs', '-v7.3')
+%save('control.mat', 'secs', '-v7.3')
+save(sprintf('%s_secs%d-%d_z_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
 
 fprintf('==== <strong>Finished Z alignment in %.2fs</strong>.\n\n', toc(z_time));
 
