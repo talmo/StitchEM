@@ -1,22 +1,13 @@
 %% Configuration
-numA = 2;
-numB = 3;
 
-A = imload_tile(numA, 1);
-B = imload_tile(numB, 1);
-
-base_tformA = secs{2}.alignments.z.tforms{1};
-base_tformB = secs{3}.alignments.z.tforms{1};
-
-backgroundA = mean(A(:));
-backgroundB = mean(B(:));
-
-[A, R_A] = imwarp(A, base_tformA, 'FillValues', backgroundA);
-[B, R_B] = imwarp(B, base_tformB, 'FillValues', backgroundB);
+A = imread('control/S2-W003_Sec8_Montage.tif');
+R_A = imref2d(size(A));
+B = imread('control/S2-W003_Sec9_Montage.tif');
+R_B = imref2d(size(B));
 
 %% Correlation
 scales = [0.125, 0.25, 0.5];
-thetas = -1:0.5:1;
+thetas = -5:0.5:5;
 
 best_corr = 0;
 best_scale = NaN;
@@ -95,12 +86,17 @@ end
 
 fprintf('best corr: %f\n', best_corr)
 fprintf('scale: %.3f\n', best_scale)
-fprintf('theta: %f | ', best_theta)
-fprintf('true: %f\n', true_theta)
-fprintf('translation: [%.1f, %.1f] | ', best_translation)
-fprintf('true: [%.1f, %.1f]\n', true_translation)
+fprintf('theta: %f\n', best_theta)
+fprintf('translation: [%.1f, %.1f]\n', best_translation)
 
-return
+%% Align
+tform = compose_tforms(make_tform('rotate', -best_theta), make_tform('translate', -best_translation));
+[Breg, R_Breg] = imwarp(B, R_B, tform, 'FillValues', mean(B(:)));
+
+
+
 %% Visualize
 figure
-imshowpair(A, R_A, B, R_B)
+imshowpair(A, R_A, B, R_B, 'falsecolor')
+figure
+imshowpair(A, R_A, Breg, R_Breg, 'falsecolor')

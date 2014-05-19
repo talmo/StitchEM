@@ -7,7 +7,7 @@ regionI = [13000 14000]; % Y
 viz = false; % Visualize region
 
 % Name of output folder
-stack_name = '0.25x';
+stack_name = '0.45x,lsq';
 
 %% Create output directory
 % Make sure we don't save into an existing folder
