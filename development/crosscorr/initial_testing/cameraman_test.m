@@ -1,6 +1,6 @@
 %% Configuration
-true_theta = 45;
-true_offset = [0, 0];
+true_theta = 0;
+true_offset = [30, 30];
 true_tform = compose_tforms(make_tform('rotate', true_theta), make_tform('translate', true_offset));
 
 % Load and transform image
@@ -12,7 +12,7 @@ thetas = -10:1:10;
 
 %% Region
 % Define region in world coordinates
-region_loc = [100, 100]; % [x, y]
+region_loc = [145, 35]; % [x, y]
 region_res = [50, 50];   % [width, height]
 
 % Get spatial reference
@@ -35,32 +35,35 @@ tilefigs
 
 %% Cross-correlation
 results = table();
-for trial = 1
+for trial = 1:length(thetas)
     % Create rotation transform
     theta = thetas(trial);
     tform_rotate = make_tform('rotate', theta);
     
     % Rotate region
-    [rotated_region, R_rotated_region] = imwarp(region, R_region, tform_rotate);
+    a = mean(region(1:end, 1)); b = mean(region(1:end, end)); c = mean(region(1, 1:end)); d = mean(region(end, 1:end));
+    [rotated_region, R_rotated_region] = imwarp(region, R_region, tform_rotate, 'FillValues', mean([a, b, c, d]));
     
     % Need to get the inscribed square
     % See: rectinrotatedrect
     % Also need to account for rotation not about the origin...
     %
     % fix this to work in all quadrants:
-    region_pts = tform_rotate.transformPointsForward(ref_bb(R_region)); % or should we use R_rotated_region's lims?
-    adjusted_pts = bsxadd(region_pts, -region_pts(1, :));
-    hyp = norm(adjusted_pts(4, :));
-    adj = max(adjusted_pts(:, 1));
-    rel_theta = acosd(adj/hyp); 
-    inscribed = rectinrotatedrect(region_res(1), region_res(2), -rel_theta);
+%     region_pts = tform_rotate.transformPointsForward(ref_bb(R_region)); % or should we use R_rotated_region's lims?
+%     adjusted_pts = bsxadd(region_pts, -region_pts(1, :));
+%     hyp = norm(adjusted_pts(4, :));
+%     adj = max(adjusted_pts(:, 1));
+%     rel_theta = acosd(adj/hyp); 
+%     inscribed = rectinrotatedrect(region_res(1), region_res(2), -rel_theta);
     
     % viz
-    draw_poly(adjusted_pts)
-    draw_poly(inscribed)
-    axis equal
+    %draw_poly(adjusted_pts)
+    %draw_poly(inscribed)
+    %axis equal
     
     % now get subscripts of inscribed from rotated image and use that
+    
+    %imshow(rotated_region, R_rotated_region)
     
     % Compute normalized cross-correlation
     C = normxcorr2(rotated_region, A);
@@ -100,7 +103,7 @@ disp('Sorted results:')
 disp(sortrows(results, 'max_C', 'descend'))
 
 %% Calculate alignment
-trial = 10;
+trial = best_trial;
 theta = results.theta(trial);
 offset = results.offset(trial, :);
 peak_loc = results.peak_loc(trial, :);
