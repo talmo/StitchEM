@@ -1,7 +1,17 @@
-function R_output = merge_spatial_refs(Rs)
+function R_output = merge_spatial_refs(Rs, varargin)
 %MERGE_SPATIAL_REFS Combine several spatial referencing objects into one.
 % Usage:
 %   R_output = merge_spatial_refs(Rs)
+
+if ~iscell(Rs)
+    Rs = {Rs};
+end
+if nargin > 1
+    Rs = [Rs(:); varargin(:)];
+end
+if ~all(cellfun(@(R) isa(R, 'imref2d'), Rs))
+    error('Input must be imref2d objects.')
+end
 
 outputWorldLimitsX = [min(cellfun(@(R) R.XWorldLimits(1), Rs)),...
                       max(cellfun(@(R) R.XWorldLimits(2), Rs))];

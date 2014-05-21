@@ -2,8 +2,8 @@
 alignment = 'z';
 
 % Region to render
-regionJ = [19000 20000]; % X
-regionI = [13000 14000]; % Y
+regionJ = [15000 17000]; % X
+regionI = [7000 9000]; % Y
 viz = false; % Visualize region
 
 % Name of output folder

@@ -2,7 +2,8 @@
 
 %% Parameters
 % Sections to align
-sec_nums = 1:169;
+info = get_path_info(waferpath);
+sec_nums = info.sec_nums;
 
 % Defaults: XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
@@ -38,26 +39,26 @@ for s=min(sec_nums):max(sec_nums); params(s) = default; end
 
 % S2-W002:
 % Bad rotation in section 1:
-%params(2).z.max_match_error = inf;
-%params(2).z.max_aligned_error = inf;
-% Bad statining in sections 16-21:
-% for s = 15:22
-%     params(s).z.max_match_error = inf;
-%     params(s).z.max_aligned_error = inf;
-% end
+params(2).z.max_match_error = inf;
+params(2).z.max_aligned_error = inf;
+% Bad staining in sections 16-21:
+for s = 15:22
+    params(s).z.max_match_error = inf;
+    params(s).z.max_aligned_error = inf;
+end
 % % Bad rotation in section 88:
-% params(88).z.max_match_error = inf;
-% params(88).z.max_aligned_error = inf;
-% params(89).z.max_match_error = inf;
-% params(89).z.max_aligned_error = inf;
+params(88).z.max_match_error = inf;
+params(88).z.max_aligned_error = inf;
+params(89).z.max_match_error = inf;
+params(89).z.max_aligned_error = inf;
 
 
 % S2-W003:
 % Section 72 is rotated by quite a bit, but 73 goes back to normal
-params(72).z.max_match_error = inf;
-params(72).z.max_aligned_error = inf;
-params(73).z.max_match_error = inf;
-params(73).z.max_aligned_error = inf;
+%params(72).z.max_match_error = inf;
+%params(72).z.max_aligned_error = inf;
+%params(73).z.max_match_error = inf;
+%params(73).z.max_aligned_error = inf;
 
 %% Rough & XY Alignment
 xy_time = tic;
@@ -194,7 +195,7 @@ render_region
 
 return
 %% Troubleshooting
-s = 72;
+s = 4;
 secA = secs{s - 1};
 secB = secs{s};
 
@@ -202,14 +203,14 @@ secB = secs{s};
 feature_set = 'base_z';
 pointsA = cell2mat(cellfun(@(t) t.global_points,  secA.features.(feature_set).tiles, 'UniformOutput', false));
 
-plot_section(secA, secA.features.(feature_set).meta.base_alignment);
+plot_section(secA, secA.features.(feature_set).meta.base_alignment, 'r0.1');
 plot_features(pointsA)
 
 %% Troubleshooting: Plot features (secB)
 feature_set = 'z';
 pointsB = cell2mat(cellfun(@(t) t.global_points,  secB.features.(feature_set).tiles, 'UniformOutput', false));
 
-plot_section(secB, secB.features.(feature_set).meta.base_alignment);
+plot_section(secB, secB.features.(feature_set).meta.base_alignment, 'g0.1');
 plot_features(pointsB)
 
 %% Troubleshooting: Plot matches

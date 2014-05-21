@@ -1,8 +1,8 @@
 %% Configuration
 
-A = imread('control/S2-W003_Sec8_Montage.tif');
+A = imread('S2-W003_secs1-169_z_aligned[7000,15000]/0.45x,lsq/S2-W003_Sec1_Montage.tif');
 R_A = imref2d(size(A));
-B = imread('control/S2-W003_Sec9_Montage.tif');
+B = imread('S2-W003_secs1-169_z_aligned[7000,15000]/0.45x,lsq/S2-W003_Sec2_Montage.tif');
 R_B = imref2d(size(B));
 
 % Sanity checks (artificial distortions):
@@ -14,8 +14,8 @@ R_B = imref2d(size(B));
 %B = padarray(A, [50, 100], mean(A(:)), 'pre');
 %R_B = imref2d(size(B));
 
-grid_sz = [50, 50];
-block_sz = [100, 100];
+grid_sz = [200, 200];
+block_sz = [150, 150];
 
 %% Correlation
 A_loc = [R_A.YWorldLimits(1), R_A.XWorldLimits(1)];

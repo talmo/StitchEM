@@ -7,4 +7,5 @@
 *.fig
 *.csv
 *.asv
+*.gif
 development/xyz_align/renders/*

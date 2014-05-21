@@ -1,6 +1,6 @@
 %% Parameters
-sec_nums = 1:100;
-base_folder = '0.45x,lsq';
+sec_nums = 1:169;
+base_folder = 'S2-W003_secs1-169_z_aligned[7000,15000]/0.45x,lsq';
 
 %% Align
 rel_tforms = cell(length(sec_nums), 1);
@@ -9,8 +9,13 @@ num_inliers = zeros(length(sec_nums) - 1, 1);
 filtered_errors = zeros(length(sec_nums) - 1, 1);
 aligned_errors = zeros(length(sec_nums) - 1, 1);
 total_align_time = tic;
-for s = 1:length(sec_nums)
+start_at = 1;
+if exist('stopped_at', 'var')
+    start_at = stopped_at;
+end
+for s = 1:2
     fprintf('== Aligning section %d (<strong>%d/%d</strong>)\n', sec_nums(s), s, length(sec_nums))
+    stopped_at = 1;
     
     if s == 1
         disp('Keeping section fixed.')
@@ -25,7 +30,7 @@ for s = 1:length(sec_nums)
     B = imread(sprintf('%s/S2-W003_Sec%d_Montage.tif', base_folder, sec_nums(s)));
     
     % Find matches
-    [ptsA, ptsB] = xcorr_match(A, B, 'grid_sz', [100, 100], 'block_sz', [150, 150]);
+    [ptsA, ptsB] = xcorr_match(A, B, 'grid_sz', [200, 200], 'block_sz', [150, 150]);
     
     % Filter matches
     [ptsA, ptsB] = gmm_filter(ptsA, ptsB);
