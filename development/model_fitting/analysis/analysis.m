@@ -1,12 +1,12 @@
 %% Save alignment data to table
-alignment = 'z';
+alignment = 'xy';
 data = table();
 
 data.sec = (secs{2}.num:secs{end}.num)';
-data.prior_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_prior_error, secs(2:end));
-data.post_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_post_error, secs(2:end));
+data.prior_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_prior_error, secs(2:end))';
+data.post_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_post_error, secs(2:end))';
 data.change = data.post_errors - data.prior_errors;
-data.num_matches = cellfun(@(sec) sec.z_matches.num_matches, secs(2:end));
+data.num_matches = cellfun(@(sec) sec.z_matches.num_matches, secs(2:end))';
 
 %% Exclude outliers
 outliers = data.sec == 72 | data.sec == 73;

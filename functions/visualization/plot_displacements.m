@@ -21,6 +21,8 @@ axis equal
 hold on, grid on
 plot(M(1), M(2), 'r*')
 title('Displacements')
+xlabel('\deltaX')
+ylabel('\deltaY')
 hold off
 
 end

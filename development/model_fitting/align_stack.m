@@ -2,63 +2,80 @@
 
 %% Parameters
 % Sections to align
-sec_nums = (1:30)';
+info = get_path_info(waferpath);
+sec_nums = info.sec_nums;
 
 % Defaults: XY alignment
 default.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
-default.xy.SURF.MetricThreshold = 11000;
+default.xy.SURF.MetricThreshold = 11000; % for full res tiles
 
 % Defaults: Z alignment
-default.z.rough_align.overview_scale = 0.78;
-
-% 0.125x
-%default.z.scale = 0.125;
-%default.z.SURF.MetricThreshold = 2000;
-
-% 0.25x
-default.z.scale = 0.25;
-default.z.SURF.MetricThreshold = 7500;
-
-default.z.NNR.MaxRatio = 0.6;
-default.z.NNR.MatchThreshold = 1.0;
-% default.z.match_z.filter_outliers = false;
-% default.z.match_z.filter_secondpass = true;
-% default.z.match_z.second_pass_threshold = '1.25x';
+% Tile scaling: 0.125x
+default.z.scale = 0.125;
+default.z.SURF.MetricThreshold = 2000;
+% Tile scaling: 0.25x
+% default.z.scale = 0.25;
+% default.z.SURF.MetricThreshold = 7500;
+% Tile scaling: 0.45x
+%default.z.scale = 0.45;
+%default.z.SURF.MetricThreshold = 15000;
+% Matching: NNR
+default.z.matching.MaxRatio = 0.6;
+default.z.matching.MatchThreshold = 1.0;
+% Matching: GMM
+default.z.matching.inlier_cluster = 'geomedian';
+% Alignment
 default.z.alignment_method = 'cpd'; % 'lsq' or 'cpd'
-default.z.max_match_error = 1000;
-default.z.max_aligned_error = 50;
+% Quality control checks
+default.z.max_match_error = 1000; % avg error after Z matching
+default.z.max_aligned_error = 50; % avg error after alignment
 
 % Initialize parameters with defaults
-for s=1:length(sec_nums); params(s) = default; end
-
-% Fallback preset for when Z matching fails
-%z_fallback = default.z;
-%z_fallback.scale = 0.125;
-%z_fallback.SURF.MetricThreshold = 2000;
+for s=min(sec_nums):max(sec_nums); params(s) = default; end
 
 % Custom per-section parameters
-% params(38).z.match_z.second_pass_threshold = '1.0x';
-% params(38).z.max_aligned_error = 150;
-% params(39).z.max_aligned_error = 65;
-% params(40).z.max_match_error = 1100;
-% params(40).z.max_aligned_error = 100;
-% params(41).z.max_aligned_error = 100;
-% params(42).z.max_aligned_error = 100;
-% for s=43:length(sec_nums); params(s).z.max_aligned_error = 100; end
-% for s=47:length(sec_nums); params(s).z.max_match_error = 1500; end
-% for s=47:length(sec_nums); params(s).z.max_aligned_error = 150; end
-% for s=67:length(sec_nums); params(s).z.max_aligned_error = 200; end
+% Example:
+% params(38).z.NNR.MaxRatio = 0.8;
+
+% S2-W002:
+% Bad rotation in section 1:
+params(2).z.max_match_error = inf;
+params(2).z.max_aligned_error = inf;
+% Bad staining in sections 16-21:
+for s = 15:22
+    params(s).z.max_match_error = inf;
+    params(s).z.max_aligned_error = inf;
+end
+% % Bad rotation in section 88:
+params(88).z.max_match_error = inf;
+params(88).z.max_aligned_error = inf;
+params(89).z.max_match_error = inf;
+params(89).z.max_aligned_error = inf;
+
+
+% S2-W003:
+% Section 72 is rotated by quite a bit, but 73 goes back to normal
+%params(72).z.max_match_error = inf;
+%params(72).z.max_aligned_error = inf;
+%params(73).z.max_match_error = inf;
+%params(73).z.max_aligned_error = inf;
+
 %% Rough & XY Alignment
 xy_time = tic;
 disp('==== <strong>Started XY alignment</strong>.')
-if ~exist('stopped_at', 'var'); stopped_at = NaN; end
-start_at_sec = max(1, stopped_at);
-secs = cell(size(sec_nums));
-for s = start_at_sec:length(secs)
+secs = cell(length(sec_nums), 1);
+start_at = 1;
+if exist('stopped_at', 'var')
+    start_at = stopped_at;
+    fprintf('<strong>Resuming XY alignment on section %d/%d.</strong>\n', start_at, length(sec_nums))
+end
+for s = start_at:length(secs)
+    stopped_at = s;
+    
     fprintf('=== Aligning section %d (<strong>%d/%d</strong>) in XY\n', sec_nums(s), s, length(secs))
     
     % Parameters
-    xy = params(s).xy;
+    xy = params(sec_nums(s)).xy;
     
     % Load section
     sec = load_section(sec_nums(s), 'scales', xy.scales);
@@ -92,24 +109,28 @@ save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end
 
 fprintf('==== <strong>Finished XY alignment in %.2fs</strong>.\n\n', toc(xy_time));
 %% Z Alignment
+if ~exist('params', 'var'); error('The ''params'' variable does not exist. Load parameters before doing Z alignment.'); end
+if ~exist('secs', 'var'); error('The ''secs'' variable does not exist. Run XY alignment or load a saved stack before doing Z alignment.'); end
+
 z_time = tic;
 disp('==== <strong>Started Z alignment</strong>.')
 
-% Resume where we stopped if we get an error
-if ~exist('stopped_at', 'var'); stopped_at = NaN; end
-start_at_sec = max(1, stopped_at);
-
+start_at = 1;
+if exist('stopped_at', 'var')
+    start_at = stopped_at;
+    fprintf('<strong>Resuming Z alignment on section %d/%d.</strong>\n', start_at, length(sec_nums))
+end
 % Align section pairs
-for s = start_at_sec:length(secs)
+for s = start_at:length(secs)
     fprintf('=== Aligning section %d (<strong>%d/%d</strong>) in Z\n', secs{s}.num, s, length(secs))
+    stopped_at = s;
     
     % Parameters
-    z = params(s).z;
+    z = params(sec_nums(s)).z;
     
     % Keep first section fixed
     if s == 1
-        disp('Keeping section fixed with respect to XY alignment.')
-        secs{s}.alignments.z = secs{s}.alignments.xy;
+        secs{1}.alignments.z = fixed_alignment(secs{1}, 'xy');
         continue
     end
     
@@ -117,57 +138,49 @@ for s = start_at_sec:length(secs)
     secA = secs{s - 1};
     secB = secs{s};
     
-    % Load images
-    if ~isfield(secA.overview, 'img') || isempty(secA.overview.img) || secA.overview.scale ~= z.rough_align.overview_scale; secA = load_overview(secA, z.rough_align.overview_scale); end
-    if ~isfield(secB.overview, 'img') || isempty(secB.overview.img) || secB.overview.scale ~= z.rough_align.overview_scale; secB = load_overview(secB, z.rough_align.overview_scale); end
+    % Load tile images
     if ~isfield(secA.tiles, 'z') || secA.tiles.z.scale ~= z.scale; secA = load_tileset(secA, 'z', z.scale); end
     if ~isfield(secB.tiles, 'z') || secB.tiles.z.scale ~= z.scale; secB = load_tileset(secB, 'z', z.scale); end
-
-    % Register overviews
-    try
-        secB.overview.alignment = align_overviews(secA, secB);
-    catch
-        % Fallback to the same alignment as the previous section
-        fprintf('Could not align overview of section %d to %d.\n', secB.num, secA.num)
-        secB.overview.alignment = secA.overview.alignment;
-    end
     
-    % Compute rough Z alignment based on overview registration
-    secB.alignments.rough_z = rough_align_z(secA, secB, z.rough_align);
+    % Compose with previous Z alignment
+    rel_alignments = {'prev_z', 'z'};
+    if secA.num == 1
+        rel_alignments = 'z'; % first section has no previous Z alignment
+    end
+    secB.alignments.prev_z = compose_alignments(secA, rel_alignments, secB, 'xy');
     
     % Detect features in overlapping regions
-    secA.features.z = detect_features(secA, 'regions', sec_bb(secB, 'rough_z'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
-    secB.features.rough_z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'rough_z', 'detection_scale', z.scale, z.SURF);
+    secA.features.base_z = detect_features(secA, 'regions', sec_bb(secB, 'prev_z'), 'alignment', 'z', 'detection_scale', z.scale, z.SURF);
+    secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'prev_z', 'detection_scale', z.scale, z.SURF);
     
     % Match features
-    %secB.z_matches = match_z(secA, secB, z.match_z, z.NNR);
-    secB.z_matches = match_z_gmm(secA, secB, z.NNR);
+    secB.z_matches = match_z_gmm(secA, secB, 'base_z', 'z', z.matching);
     
     % Check for bad matching
     if secB.z_matches.meta.avg_error > z.max_match_error
-        stopped_at = s;
-        error('[sec %d/%d]: Error after matching is too large for good alignment. There are probably too many outliers.', s, length(secs))
+        error('[sec %d/%d]: Error after matching is very large. This may be because the two sections are misaligned by a large rotation/translation or due to bad matching.', s, length(secs))
     end
     
     % Align
     switch z.alignment_method
         case 'lsq'
             % Least Squares
-            secB.alignments.z = align_z_pair_lsq(secB, secB.z_matches);
+            secB.alignments.z = align_z_pair_lsq(secB);
         
         case 'cpd'
             % Coherent Point Drift
-            secB.alignments.z = align_z_pair_cpd(secB, secB.z_matches);
+            secB.alignments.z = align_z_pair_cpd(secB);
     end
     
     % Check for bad alignment
     if secB.alignments.z.meta.avg_post_error > z.max_aligned_error
-        stopped_at = s;
-        error('[sec %d/%d]: Error after alignment is too large for good alignment. Check Z matches.', s, length(secs))
+        error('[sec %d/%d]: Error after alignment is very large. This may be because the two sections are misaligned by a large rotation/translation or due to bad matching.', s, length(secs))
     end
     
-    % Clear tile images in previous section
+    % Clear tile images and features to save memory
     secA = imclear_sec(secA, 'tiles');
+    secA.features.base_z.tiles = [];
+    secB.features.z.tiles = [];
     
     % Save
     secB.params.z = z;
@@ -176,39 +189,49 @@ for s = start_at_sec:length(secs)
     clear secA secB
 end
 secs{end} = imclear_sec(secs{end});
+
+% Save to cache
+disp('=== Saving sections to disk.');
+%save(sprintf('%s_secs%d-%d_z_aligned_lsq_0.125x.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
+%save('control.mat', 'secs', '-v7.3')
+save(sprintf('%s_secs%d-%d_z_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
+
 fprintf('==== <strong>Finished Z alignment in %.2fs</strong>.\n\n', toc(z_time));
 
+return
 %% Render
 render_region
 
 return
 %% Troubleshooting
-s = 2;
+s = 4;
 secA = secs{s - 1};
 secB = secs{s};
 
 %% Troubleshooting: Plot features (secA)
-pointsA = cell2mat(cellfun(@(t) t.global_points,  secA.features.z.tiles, 'UniformOutput', false));
+feature_set = 'base_z';
+pointsA = cell2mat(cellfun(@(t) t.global_points,  secA.features.(feature_set).tiles, 'UniformOutput', false));
 
-plot_section(secA, secA.features.z.meta.base_alignment);
+plot_section(secA, secA.features.(feature_set).meta.base_alignment, 'r0.1');
 plot_features(pointsA)
 
 %% Troubleshooting: Plot features (secB)
-pointsB = cell2mat(cellfun(@(t) t.global_points,  secB.features.rough_z.tiles, 'UniformOutput', false));
+feature_set = 'z';
+pointsB = cell2mat(cellfun(@(t) t.global_points,  secB.features.(feature_set).tiles, 'UniformOutput', false));
 
-plot_section(secB, secB.features.rough_z.meta.base_alignment);
+plot_section(secB, secB.features.(feature_set).meta.base_alignment, 'g0.1');
 plot_features(pointsB)
 
 %% Troubleshooting: Plot matches
-%M = merge_match_sets(secB.z_matches);
 plot_section(secA, 'z', 'r0.1')
-plot_section(secB, 'rough_z', 'g0.1')
-%plot_matches(M.A, M.B)
+plot_section(secB, 'prev_z', 'g0.1')
 plot_matches(secB.z_matches.A, secB.z_matches.B)
-title(sprintf('Matches (secs %d <-> %d) | Error: %fpx / match', secA.num, secB.num, secB.z_matches.meta.avg_error))
+title(sprintf('Matches (secs %d <-> %d) | Error: %fpx / match | n = %d matches', secA.num, secB.num, secB.z_matches.meta.avg_error, secB.z_matches.num_matches))
 
 %% Troubleshooting: Plot displacements
+% All displacements
 plot_displacements(secB.z_matches.meta.all_displacements), hold on
+% Inlier displacements
 displacements = secB.z_matches.B.global_points - secB.z_matches.A.global_points;
 scatter(displacements(:,1), displacements(:,2), 'gx')
 title(sprintf('Displacements (secs %d <-> %d) | Error: %fpx / match | n = %d -> %d after filtering', secA.num, secB.num, secB.z_matches.meta.avg_error, length(secB.z_matches.meta.all_displacements), secB.z_matches.num_matches))
@@ -217,4 +240,3 @@ title(sprintf('Displacements (secs %d <-> %d) | Error: %fpx / match | n = %d -> 
 plot_section(secA, 'z', 'r0.1')
 plot_section(secB, 'z', 'g0.1')
 title(sprintf('Secs %d <-> %d | Error: %fpx -> %fpx / match | Method: %s', secA.num, secB.num, secB.alignments.z.meta.avg_prior_error, secB.alignments.z.meta.avg_post_error, secB.alignments.z.meta.method), 'Interpreter', 'none')
-

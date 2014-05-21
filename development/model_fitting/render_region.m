@@ -2,12 +2,12 @@
 alignment = 'z';
 
 % Region to render
-regionJ = [19000 20000]; % X
-regionI = [13000 14000]; % Y
+regionJ = [15000 17000]; % X
+regionI = [7000 9000]; % Y
 viz = false; % Visualize region
 
 % Name of output folder
-stack_name = '0.25x';
+stack_name = '0.45x,lsq';
 
 %% Create output directory
 % Make sure we don't save into an existing folder

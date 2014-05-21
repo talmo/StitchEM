@@ -77,7 +77,7 @@ end
 % Show merge
 if params.show_registration
     figure
-    imshow_section(sec, 'tforms', 'rough_xy')
+    imshow_section('tile_imgs', tiles, 'pre_scale', tile_prescale,'tforms', alignment.tforms)
 end
 end
 

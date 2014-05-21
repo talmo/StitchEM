@@ -1,6 +1,7 @@
 % Stack
-secs = {secA, secB};
-alignments = {'xy', 'z_cpd'};
+%secs = {secA, secB};
+secs = [secs2(2), secs2(2), secs2(2)];
+alignments = {'rough_xy', 'xy', 'z'};
 
 % Clear any loaded images to save memory
 secs = cellfun(@imclear_sec, secs, 'UniformOutput', false);
@@ -22,6 +23,8 @@ end
 
 % Merge all tile references to find stack reference
 stack_R = merge_spatial_refs(vertcat(tile_Rs{:}));
+
+fprintf('Calculated and merged output spatial references. [%.2fs]\n', toc(total_time))
 
 %% Render each section
 for s = 1:length(secs)
