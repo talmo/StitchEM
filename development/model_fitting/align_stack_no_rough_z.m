@@ -63,8 +63,15 @@ params(89).z.max_aligned_error = inf;
 %% Rough & XY Alignment
 xy_time = tic;
 disp('==== <strong>Started XY alignment</strong>.')
-secs = cell(size(sec_nums));
-for s = 1:length(secs)
+secs = cell(length(sec_nums), 1);
+start_at = 1;
+if exist('stopped_at', 'var')
+    start_at = stopped_at;
+    fprintf('<strong>Resuming XY alignment on section %d/%d.</strong>\n', start_at, length(sec_nums))
+end
+for s = start_at:length(secs)
+    stopped_at = s;
+    
     fprintf('=== Aligning section %d (<strong>%d/%d</strong>) in XY\n', sec_nums(s), s, length(secs))
     
     % Parameters
@@ -103,16 +110,18 @@ save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end
 fprintf('==== <strong>Finished XY alignment in %.2fs</strong>.\n\n', toc(xy_time));
 %% Z Alignment
 if ~exist('params', 'var'); error('The ''params'' variable does not exist. Load parameters before doing Z alignment.'); end
+if ~exist('secs', 'var'); error('The ''secs'' variable does not exist. Run XY alignment or load a saved stack before doing Z alignment.'); end
 
 z_time = tic;
 disp('==== <strong>Started Z alignment</strong>.')
 
-% Resume where we stopped if we get an error
-if ~exist('stopped_at', 'var'); stopped_at = NaN; end
-start_at_sec = max(1, stopped_at);
-
+start_at = 1;
+if exist('stopped_at', 'var')
+    start_at = stopped_at;
+    fprintf('<strong>Resuming Z alignment on section %d/%d.</strong>\n', start_at, length(sec_nums))
+end
 % Align section pairs
-for s = start_at_sec:length(secs)
+for s = start_at:length(secs)
     fprintf('=== Aligning section %d (<strong>%d/%d</strong>) in Z\n', secs{s}.num, s, length(secs))
     stopped_at = s;
     

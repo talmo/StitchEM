@@ -27,7 +27,7 @@ alignment.meta.fixed_tile = params.fixed_tile;
 alignment.meta.avg_prior_error = avg_prior_error;
 alignment.meta.avg_post_error = avg_post_error;
 
-if params.verbosity > 0; fprintf('Error: %f -> %fpx / match (%d matches) [%.2fs]\n', avg_prior_error, avg_post_error, sec.xy_matches.num_matches, toc); end
+if params.verbosity > 0; fprintf('Error: %f -> <strong>%fpx / match</strong> [%.2fs]\n', avg_prior_error, avg_post_error, sec.xy_matches.num_matches, toc); end
 
 end
 
