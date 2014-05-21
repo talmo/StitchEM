@@ -1,5 +1,5 @@
 function plot_stack(secs, alignment, outline_only)
-%PLOT_STACK Plots a 3d visualization of the stack.
+%PLOT_STACK Plots a 3-D visualization of the stack.
 
 if nargin < 2
     alignments = fieldnames(secs{end}.alignments);
