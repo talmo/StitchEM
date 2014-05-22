@@ -1,12 +1,13 @@
 %% Save alignment data to table
 alignment = 'xy';
+matches = 'xy_matches';
 data = table();
 
-data.sec = (secs{2}.num:secs{end}.num)';
-data.prior_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_prior_error, data.sec);
-data.post_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_post_error, data.sec);
+data.sec = cellfun(@(sec) sec.num, secs(2:end));
+data.prior_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_prior_error, secs(2:end));
+data.post_errors = cellfun(@(sec) sec.alignments.(alignment).meta.avg_post_error, secs(2:end));
 data.change = data.post_errors - data.prior_errors;
-data.num_matches = cellfun(@(sec) sec.z_matches.num_matches, data.sec);
+data.num_matches = cellfun(@(sec) sec.(matches).num_matches, secs(2:end));
 
 %% Exclude outliers
 outliers = data.sec == 72 | data.sec == 73;
@@ -19,19 +20,19 @@ summary(data)
 %% Plot errors
 figure
 bar(data.sec, data.post_errors)
-title('Average error after Z alignment')
+title('Average error after alignment')
 xlabel('Section'), ylabel('Average error (px / match)')
 axis tight
 
 figure
 hist(data.post_errors, 30)
-title('Distribution of average error after Z alignment')
+title('Distribution of average error after alignment')
 xlabel('Average error (px / match)'), ylabel('Frequency')
 axis tight
 
 figure
 boxplot(data.post_errors)
-title('Average error after Z alignment')
+title('Average error after alignment')
 
 tilefigs
 

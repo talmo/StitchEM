@@ -4,7 +4,6 @@
 % Stack
 info = get_path_info(waferpath);
 sec_nums = info.sec_nums;
-secs = cell(length(sec_nums), 1);
 
 % Run parameters
 overwrite_secs = false; % errors out if the current section was already aligned
@@ -31,7 +30,7 @@ defaults.z.matching.MatchThreshold = 1.0;
 % Matching: GMM
 defaults.z.matching.inlier_cluster = 'geomedian';
 % Alignment
-defaults.z.alignment_method = 'cpd'; % 'lsq' or 'cpd'
+defaults.z.alignment_method = 'cpd'; % 'lsq', 'cpd' or 'fixed'
 % Quality control checks
 defaults.z.max_match_error = 1000; % avg error after Z matching
 defaults.z.max_aligned_error = 50; % avg error after alignment
@@ -58,12 +57,19 @@ params = repmat(defaults, max(sec_nums), 1);
 ignore_z_error = defaults.z;
 ignore_z_error.ignore_error = true;
 
+% Pre-set for fixed alignment
+fixed_z = defaults.z;
+fixed_z.alignment_method = 'fixed';
 
 % S2-W002:
 % Bad rotation in section 1:
 params(2).z = ignore_z_error;
+% Bad staining:
+fixed_secs = [14, 17, 18, 20];
+[params(fixed_secs).z] = deal(fixed_z);
+
 % Bad staining in sections 16-21:
-[params(16:22).z] = deal(ignore_z_error);
+%[params(16:22).z] = deal(ignore_z_error);
 % Bad rotation in section 88:
 [params(88:89).z] = deal(ignore_z_error);
 
@@ -74,11 +80,11 @@ params(2).z = ignore_z_error;
 
 %% Rough & XY Alignment
 if ~exist('params', 'var'); error('The ''params'' variable does not exist. Load parameters before doing XY alignment.'); end
-if ~exist('secs', 'var'); error('The ''secs'' variable does not exist. Start a new stack or load a saved stack before doing XY alignment.'); end
+if ~exist('secs', 'var'); secs = cell(length(sec_nums), 1); end
 
 disp('==== <strong>Started XY alignment</strong>.')
 start_on = 1;
-if exist('stopped_at', 'var')
+if exist('stopped_on', 'var')
     start_on = stopped_on;
     fprintf('<strong>Resuming XY alignment on section %d/%d.</strong> Clear ''stopped_on'' to reset.\n', start_on, length(sec_nums))
 end
@@ -124,13 +130,13 @@ for s = start_on:length(secs)
     secs{s} = sec;
     clear sec
 end
-clear stopped_at
+clear stopped_on
 
 % Save to cache
 disp('=== Saving sections to disk.');
 save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
 
-total_xy_time = sum(cellfun(@(sec) sec.runtime.time_elapsed, secs));
+total_xy_time = sum(cellfun(@(sec) sec.runtime.xy.time_elapsed, secs));
 fprintf('==== <strong>Finished XY alignment in %.2fs (%.2fs / section)</strong>.\n\n', total_xy_time, total_xy_time / length(secs));
 
 if strcmpi(stop_after, 'xy')
@@ -158,9 +164,9 @@ for s = start_on:length(secs)
     % Parameters
     z_params = params(sec_nums(s)).z;
     
-    % Keep first section fixed
-    if s == 1
-        secs{1}.alignments.z = fixed_alignment(secs{1}, 'xy');
+    % Keep section fixed
+    if s == 1 || strcmp(z_params.alignment_method, 'fixed')
+        secs{s}.alignments.z = fixed_alignment(secs{s}, 'xy');
         continue
     end
     
@@ -174,8 +180,8 @@ for s = start_on:length(secs)
     
     % Compose with previous Z alignment
     rel_alignments = {'prev_z', 'z'};
-    if secA.num == 1
-        rel_alignments = 'z'; % first section has no previous Z alignment
+    if ~isfield(secA, 'prev_z');
+        rel_alignments = 'z'; % fixed sections have no previous Z alignment
     end
     secB.alignments.prev_z = compose_alignments(secA, rel_alignments, secB, 'xy');
     
@@ -189,7 +195,7 @@ for s = start_on:length(secs)
     % Check for bad matching
     if secB.z_matches.meta.avg_error > z_params.max_match_error
         msg = sprintf('[sec %d/%d]: Error after matching is very large. This may be because the two sections are misaligned by a large rotation/translation or due to bad matching.', s, length(secs));
-        if z_params.ignore_max_error; warning(msg); else error(msg); end
+        if z_params.ignore_error; warning(msg); else error(msg); end
     end
     
     % Align
@@ -206,7 +212,7 @@ for s = start_on:length(secs)
     % Check for bad alignment
     if secB.alignments.z.meta.avg_post_error > z_params.max_aligned_error
         msg = sprintf('[sec %d/%d]: Error after alignment is very large. This may be because the two sections are misaligned by a large rotation/translation or due to bad matching.', s, length(secs));
-        if z_params.ignore_max_error; warning(msg); else error(msg); end
+        if z_params.ignore_error; warning(msg); else error(msg); end
     end
     
     % Clear tile images and features to save memory
