@@ -9,7 +9,7 @@ if nargin < 2
     z_matches = secB.z_matches;
 end
 if nargin < 3
-    base_alignment = z_matches.meta.alignmentB;
+    base_alignment = z_matches.alignmentB;
 end
 
 total_time = tic;
