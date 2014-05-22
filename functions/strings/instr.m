@@ -11,7 +11,7 @@ function TF = instr(needle, haystack, flags)
 %   flags indicates the matching mode:
 %       's' => True if needle is a substring of haystack (default)
 %       'r' => True if regexp(needle, haystack) returns a match
-%       'e' => Looks for exact match
+%       'e' => Looks for exact case-insensitive match
 %
 %       You can combine these with the modifier flags:
 %       'c' => Case-sensitive

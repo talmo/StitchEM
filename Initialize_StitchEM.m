@@ -9,12 +9,14 @@
 %% Paths
 % Add StitchEM functions to MATLAB search path
 addpath(genpath(fullfile(pwd, 'functions')));
+addpath(genpath(fullfile(pwd, 'pipeline')));
 
 % Set the current wafer path
 %waferpath('/data/home/talmo/EMdata/S2-W003');
 waferpath('/data/home/talmo/EMdata/W002');
 
-cd('development/model_fitting');
-addpath(pwd);
-addpath(fullfile(pwd, 'functions'));
-addpath(genpath(fullfile(pwd, 'CPD2')));
+
+% cd('development/model_fitting');
+% addpath(pwd);
+% addpath(fullfile(pwd, 'functions'));
+% addpath(genpath(fullfile(pwd, 'CPD2')));
