@@ -22,14 +22,14 @@ for tA = 1:secA.num_tiles
     tile_featsA = featuresA.tiles{tA};
     
     % Match with each tile it overlaps with in secB
-    overlapping_tiles = featuresA.meta.overlap_with{tA};
+    overlapping_tiles = featuresA.overlap_with{tA};
     for tB = overlapping_tiles
         % Get matching tile features
         tile_featsB = featuresB.tiles{tB};
         
         % Find the region numbers of the overlap between the two tiles
-        regionA = find(featuresA.meta.overlap_with{tA} == tB, 1);
-        regionB = find(featuresB.meta.overlap_with{tB} == tA, 1);
+        regionA = find(featuresA.overlap_with{tA} == tB, 1);
+        regionB = find(featuresB.overlap_with{tB} == tA, 1);
         
         % Skip if we don't have a matching region in either tile
         if isempty(regionA) || isempty(regionB)
@@ -124,10 +124,10 @@ z_matches.meta.num_nnr_matches = height(nnr_matches.A);
 z_matches.meta.all_displacements = D;
 z_matches.meta.secA = secA.num;
 z_matches.meta.feature_setA = params.feature_setA;
-z_matches.meta.alignmentA = featuresA.meta.base_alignment;
+z_matches.meta.alignmentA = featuresA.alignment;
 z_matches.meta.secB = secB.num;
 z_matches.meta.feature_setB = params.feature_setB;
-z_matches.meta.alignmentB = featuresB.meta.base_alignment;
+z_matches.meta.alignmentB = featuresB.alignment;
 z_matches.meta.inlier_clustering_method = params.inlier_cluster;
 
 if params.verbosity > 0; fprintf('Found %d matches. Error before alignment: <strong>%fpx / match</strong>. [%.2fs]\n', z_matches.num_matches, z_matches.meta.avg_error, toc(total_time)); end

@@ -39,9 +39,9 @@ haystack = p.Results.haystack;
 flags = p.Results.flags;
 
 % Matching mode flags
-substr = any(flags == 's');
 regex = any(flags == 'r');
 exact = any(flags == 'e');
+substr = any(flags == 's') || (~regex && ~exact);
 
 % Modifier flags
 case_sensitive = any(flags == 'c');

@@ -118,15 +118,28 @@ nnr_matches.A = vertcat(match_setsA{:});
 nnr_matches.B = vertcat(match_setsB{:});
 
 % Filter outliers
-switch params.filter_method
-    case 'gmm'
-        [inliers, outliers] = gmm_filter(nnr_matches, params.GMM);
-    case 'geomedian'
-        [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian);
-    otherwise
-        % Keep all NNR matches as inliers
-        inliers = 1:height(nnr_matches);
-        outliers = [];
+try
+    switch params.filter_method
+        case 'gmm'
+            [inliers, outliers] = gmm_filter(nnr_matches, params.GMM);
+        case 'geomedian'
+            [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian);
+        otherwise
+            % Keep all NNR matches as inliers
+            inliers = 1:height(nnr_matches);
+            outliers = [];
+    end
+catch
+    switch params.filter_fallback
+        case 'gmm'
+            [inliers, outliers] = gmm_filter(nnr_matches, params.GMM);
+        case 'geomedian'
+            [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian);
+        otherwise
+            % Keep all NNR matches as inliers
+            inliers = 1:height(nnr_matches);
+            outliers = [];
+    end
 end
 
 % Extract the inliers
@@ -160,7 +173,7 @@ z_matches.meta.num_outliers = height(outliers.A);
 z_matches.params = params;
 
 if params.verbosity > 0; fprintf('Found %d/%d inlier matches. Error before alignment: <strong>%fpx / match</strong>. [%.2fs]\n', ...
-        z_matches.num_matches, z_matches.meta.num_outliers, z_matches.meta.avg_error, toc(total_time)); end
+        z_matches.num_matches, z_matches.meta.num_nnr_matches, z_matches.meta.avg_error, toc(total_time)); end
 
 end
 
@@ -191,6 +204,10 @@ end
 filtering_methods = {'geomedian', 'gmm', 'none'};
 p.addParameter('filter_method', 'gmm', @(x) ischar(x) && validatestr(x, filtering_methods));
 
+% Fallback
+%   Method to use if filtering fails
+p.addParameter('filter_fallback', 'geomedian', @(x) ischar(x) && validatestr(x, filtering_methods));
+
 % Keep outliers
 %   Saves points that were filtered out to outliers field.
 p.addParameter('keep_outliers', false);
@@ -198,6 +215,8 @@ p.addParameter('keep_outliers', false);
 % GMM Parameters
 GMM_defaults = struct();
 GMM_defaults.inlier_cluster = 'geomedian';
+GMM_defaults.warning = 'error';
+GMM_defaults.Replicates = 5;
 p.addParameter('GMM', GMM_defaults, @(x) isstruct(x) && all(instr(fieldnames(x), fieldnames(GMM_defaults), 'a')));
 for f = fieldnames(GMM_defaults)'
     p.addParameter(f{1}, GMM_defaults.(f{1}));
