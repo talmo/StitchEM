@@ -1,14 +1,27 @@
-function plot_matches(matched_pts1, matched_pts2, scale, alt_colors)
+function plot_matches(ptsA, ptsB, scale, alt_colors)
 %PLOT_MATCHES Plots the pair of matching points.
 % Usage:
-%   PLOT_MATCHES(matched_pts1, matched_pts2)
-%   PLOT_MATCHES(matched_pts1, matched_pts2, scale)
-%   PLOT_MATCHES(matched_pts1, matched_pts2, scale, alt_colors)
+%   plot_matches(ptsA, ptsB)
+%   plot_matches(ptsA, ptsB, scale)
+%   plot_matches(ptsA, ptsB, scale, alt_colors)
 %
 % Notes:
 %   - scale = 1.0 (default)
 %   - alt_colors = false (default), if true displays matches using
 %   alternative color scheme
+
+% Handle match structs
+if isstruct(ptsA)
+    if isfield(ptsA, 'match_sets')
+        matches = merge_match_sets(ptsA);
+        ptsA = matches.A;
+        ptsB = matches.B;
+    elseif isfield(ptsA, 'A') && isfield(ptsA, 'B')
+        ptsB = ptsA.B;
+        ptsA = ptsA.A;
+    end
+end
+
 if nargin < 3
     scale = 1.0;
 end
@@ -27,27 +40,28 @@ else
 end
 
 % Handle tables
-if istable(matched_pts1)
-    matched_pts1 = matched_pts1.global_points;
+if istable(ptsA)
+    ptsA = ptsA.global_points;
 end
-if istable(matched_pts2)
-    matched_pts2 = matched_pts2.global_points;
+if istable(ptsB)
+    ptsB = ptsB.global_points;
 end
 
+
 % Scale the points
-matched_pts1 = transformPointsForward(make_tform('scale', scale), matched_pts1);
-matched_pts2 = transformPointsForward(make_tform('scale', scale), matched_pts2);
+ptsA = transformPointsForward(make_tform('scale', scale), ptsA);
+ptsB = transformPointsForward(make_tform('scale', scale), ptsB);
 
 hold on
 % Plot the points
-plot(matched_pts1(:,1), matched_pts1(:,2), pts_marker1)
-plot(matched_pts2(:,1), matched_pts2(:,2), pts_marker2)
+plot(ptsA(:,1), ptsA(:,2), pts_marker1)
+plot(ptsB(:,1), ptsB(:,2), pts_marker2)
 
 % Plot the lines between the points
-lineX = [matched_pts1(:,1)'; matched_pts2(:,1)'];
+lineX = [ptsA(:,1)'; ptsB(:,1)'];
 numPts = numel(lineX);
 lineX = [lineX; NaN(1,numPts/2)];
-lineY = [matched_pts1(:,2)'; matched_pts2(:,2)'];
+lineY = [ptsA(:,2)'; ptsB(:,2)'];
 lineY = [lineY; NaN(1,numPts/2)];
 plot(lineX(:), lineY(:), line_marker);
 hold off

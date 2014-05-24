@@ -99,7 +99,7 @@ inlier_clustering_methods = {'smallest_error', 'geomedian'};
 p.addParameter('inlier_cluster', 'geomedian', @(x) validatestr(x, inlier_clustering_methods));
 
 % What to do with warnings
-p.addParameters('warning', 'off', @(x) validatestr(x, {'on', 'off', 'error'}));
+p.addParameter('warning', 'off', @(x) validatestr(x, {'on', 'off', 'error'}));
 
 % Validate and parse input
 p.parse(varargin{:});

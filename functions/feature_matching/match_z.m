@@ -151,6 +151,7 @@ z_matches.secA = secA.name;
 z_matches.secB = secB.name;
 z_matches.alignmentA = featuresA.alignment;
 z_matches.alignmentB = featuresB.alignment;
+z_matches.match_type = 'z';
 z_matches.meta.avg_error = avg_error;
 z_matches.meta.avg_nnr_error = avg_nnr_error;
 z_matches.meta.avg_outlier_error = avg_outlier_error;
@@ -202,6 +203,14 @@ for f = fieldnames(GMM_defaults)'
     p.addParameter(f{1}, GMM_defaults.(f{1}));
 end
 
+% geomedian_filter Parameters
+geomedian_defaults = struct();
+geomedian_defaults.cutoff = '3x';
+p.addParameter('geomedian', geomedian_defaults, @(x) isstruct(x) && all(instr(fieldnames(x), fieldnames(geomedian_defaults), 'a')));
+for f = fieldnames(geomedian_defaults)'
+    p.addParameter(f{1}, geomedian_defaults.(f{1}));
+end
+
 % Columns to keep for the matched features
 %   Note: descriptors will use up a lot of memory!
 feature_fields = {'local_points', 'global_points', 'descriptors', 'feature_scale'};
@@ -228,34 +237,13 @@ else
     featuresB = secB.features.(params.feature_setB);
 end
 
-% Make sure keep_cols is a cell if only only col was passed in
+% Make sure keep_cols is a cell if only one col was passed in
 if ~iscell(params.keep_cols)
     params.keep_cols = {params.keep_cols};
 end
 
-% Overwrite struct values if NNR params passed explicitly
-for f = fieldnames(NNR_defaults)'
-    if ~instr(f{1}, fieldnames(params.NNR))
-        params.NNR.(f{1}) = NNR_defaults.(f{1});
-    end
-    if ~instr(f{1}, p.UsingDefaults)
-        params.NNR.(f{1}) = params.(f{1});
-    end
-    % Keep the "official copy" of the NNR params in the NNR structure to
-    % avoid ambiguity
-    params = rmfield(params, f{1});
-end
-
-% Overwrite struct values if GMM params passed explicitly
-for f = fieldnames(GMM_defaults)'
-    if ~instr(f{1}, fieldnames(params.GMM))
-        params.GMM.(f{1}) = GMM_defaults.(f{1});
-    end
-    if ~instr(f{1}, p.UsingDefaults)
-        params.NNR.(f{1}) = params.(f{1});
-    end
-    % Keep the "official copy" of the GMM params in the NNR structure to
-    % avoid ambiguity
-    params = rmfield(params, f{1});
-end
+% Overwrite parameter structures with any explicit field names
+params = overwrite_struct(params, NNR_defaults, 'NNR', p.UsingDefaults);
+params = overwrite_struct(params, GMM_defaults, 'GMM', p.UsingDefaults);
+params = overwrite_struct(params, geomedian_defaults, 'geomedian', p.UsingDefaults);
 end

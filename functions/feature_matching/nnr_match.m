@@ -32,19 +32,14 @@ function matches = nnr_match(A, B, varargin)
 % See also: match_z, matchFeatures, detect_surf_features
 
 % Process parameters
-[params, unmatched_params] = parse_input(varargin{:});
+params = parse_input(varargin{:});
 if ~instr('descriptors', A.Properties.VariableNames) || ...
         ~instr('descriptors', B.Properties.VariableNames)
    error('Features sets must have a descriptors column.')
 end
 
-% matchFeatures defaults - these are overwritten with any other parameters
-%   passed in to this function
-fixed_params.Prenormalized = true; % SURF descriptors are prenormalized
-fixed_params.Metric = 'SSD';
-
 % Match using NNR
-[indexPairs, matchMetric] = matchFeatures(A.descriptors, B.descriptors, fixed_params, unmatched_params);
+[indexPairs, matchMetric] = matchFeatures(A.descriptors, B.descriptors, params.NNR);
 
 % Return specified output type
 switch params.out
@@ -62,8 +57,7 @@ end
 
 % Metric fields
 matches.metric = matchMetric;
-matches.metric_type = fixed_params.Metric;
-if isfield(unmatched_params, 'Metric'); matches.metric_type = unmatched_params.Metric; end
+matches.metric_type = params.NNR.Metric;
 
 end
 
@@ -85,7 +79,7 @@ end
 
 % Output types
 out_types = {'index', 'rows', 'rows-nodesc'};
-p.addParameter('out', 'index', @(x) validatestring(x, out_types));
+p.addParameter('out', 'index', @(x) validatestr(x, out_types));
 
 % Verbosity
 p.addParameter('verbosity', 1);
