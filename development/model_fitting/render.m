@@ -1,7 +1,8 @@
 % Stack
 %secs = {secA, secB};
-secs = [secs2(2), secs2(2), secs2(2)];
-alignments = {'rough_xy', 'xy', 'z'};
+%secs = [secs, secs2(2), secs2(2)];
+%alignments = {'rough_xy', 'xy', 'z'};
+alignment = 'xy';
 
 % Clear any loaded images to save memory
 secs = cellfun(@imclear_sec, secs, 'UniformOutput', false);
@@ -12,7 +13,7 @@ tile_Rs = cell(length(secs), 1);
 for s = 1:length(secs)
     % For convenience
     sec = secs{s};
-    tforms = sec.alignments.(alignments{s}).tforms;
+    tforms = sec.alignments.(alignment).tforms;
     
     % Get initial spatial references before alignment
     initial_Rs = cellfun(@imref2d, sec.tile_sizes, 'UniformOutput', false);
@@ -31,7 +32,7 @@ for s = 1:length(secs)
     render_time = tic;
     % Convenience
     sec = secs{s};
-    tforms = sec.alignments.(alignments{s}).tforms;
+    tforms = sec.alignments.(alignment).tforms;
     sec_tile_Rs = tile_Rs{s};
 
     % Transform tiles
@@ -55,7 +56,7 @@ for s = 1:length(secs)
     end
 
     % Write to disk
-    render_path = ['renders' filesep sec.name '-' alignments{s} '.tif'];
+    render_path = ['renders' filesep sec.name '-' alignment '.tif'];
     imwrite(section, render_path);
     
     fprintf('Rendered section %d (%d/%d). [%.2fs]\n', sec.num, s, length(secs), toc(render_time))

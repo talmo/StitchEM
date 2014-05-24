@@ -18,7 +18,7 @@ tform_warnings('off')
 tile_set = closest_tileset(sec, params.detection_scale);
 tiles = sec.tiles.(tile_set).img;
 pre_scale = sec.tiles.(tile_set).scale;
-if params.verbosity > 0; fprintf('Using tile set ''%s'' with base alignment ''%s''.\n', tile_set,  params.alignment); end
+if params.verbosity > 0; fprintf('Using tile set ''%s'' with base alignment ''%s''.\n', tile_set, params.alignment); end
 
 % Find overlap regions to detect features in
 bounding_boxes = sec_bb(sec, params.alignment);
@@ -100,7 +100,8 @@ p.KeepUnmatched = true;
 
 % Alignment
 alignments = fieldnames(sec.alignments);
-p.addParameter('alignment', alignments{end}, @(x) iscell(x) || (ischar(x) && validatestr(x, alignments)));
+%p.addParameter('alignment', alignments{end}, @(x) iscell(x) || (ischar(x) && validatestr(x, alignments)));
+p.addParameter('alignment', alignments{end}, @(x) validatestr(x, alignments));
 
 % Regions
 p.addParameter('regions', {});
