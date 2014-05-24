@@ -17,8 +17,8 @@ end
 % CPD options
 methods = {'rigid', 'affine', 'nonrigid'};
 opt.method = validatestring(method, methods, mfilename); 
-opt.viz = true;
-opt.savegif = true;
+opt.viz = visualize;
+opt.savegif = false;
 opt.verbosity = 0;
 
 fprintf('Calculating alignment using CPD (%s)...\n', opt.method)

@@ -56,6 +56,9 @@ switch params.out
         nodesc = ~strcmp('descriptors', feats.Properties.VariableNames);
         matches.A = A(indexPairs(:, 1), nodesc);
         matches.B = B(indexPairs(:, 2), nodesc);
+    otherwise
+        matches.A = A.(params.out)(indexPairs(:, 1), :);
+        matches.B = B.(params.out)(indexPairs(:, 2), :);
 end
 
 % Metric fields
@@ -73,7 +76,8 @@ p.KeepUnmatched = true;
 
 % Output types
 out_types = {'index', 'rows', 'rows-nodesc'};
-p.addParameter('out', 'index', @(x) validatestring(x, out_types));
+%p.addParameter('out', 'index', @(x) validatestring(x, out_types));
+p.addParameter('out', 'index');
 
 % Verbosity
 p.addParameter('verbosity', 1);

@@ -2,12 +2,12 @@
 alignment = 'z';
 
 % Region to render
-regionJ = [15000 17000]; % X
-regionI = [7000 9000]; % Y
+regionJ = [27000 28000]; % X
+regionI = [23000 24000]; % Y
 viz = false; % Visualize region
 
 % Name of output folder
-stack_name = '0.45x,lsq';
+stack_name = '1000px';
 
 %% Create output directory
 % Make sure we don't save into an existing folder
@@ -24,6 +24,7 @@ mkdir(output_folder);
 %% Calculate spatial references
 total_render_time = tic;
 disp('==== <strong>Started rendering section regions</strong>.')
+fprintf('Calculating output spatial reference...')
 
 tile_Rs = cell(length(secs), 1);
 for s = 1:length(secs)
@@ -45,9 +46,10 @@ stack_R = merge_spatial_refs(vertcat(tile_Rs{:}));
 [region_XLims, region_YLims] = stack_R.intrinsicToWorld(regionJ, regionI);
 region_R = imref2d([diff(regionI), diff(regionJ)], region_XLims, region_YLims);
 
+fprintf(' Done. [%.2fs]\n', toc(total_render_time))
 %% Visualize region
 if viz
-    s = 1;
+    s = 100;
     plot_section(secs{s}, alignment)
     region_bb = ref_bb(region_R);
     draw_poly(region_bb)

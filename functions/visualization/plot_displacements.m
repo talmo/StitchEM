@@ -1,4 +1,4 @@
-function plot_displacements(displacements)
+function plot_displacements(displacements, MarkerSpec)
 %PLOT_DISPLACEMENTS Plots match displacements with their geometric median.
 %
 % Usage:
@@ -12,11 +12,15 @@ function plot_displacements(displacements)
 %   displacements = matches.B.global_points - matches.A.global_points;
 %   plot_displacements(displacements)
 
+if nargin < 2
+    MarkerSpec = 'ko';
+end
+
 % Find the geometric median of the displacements
 M = geomedian(displacements);
 
 % Plot
-scatter(displacements(:,1), displacements(:,2), 'ko')
+scatter(displacements(:,1), displacements(:,2), MarkerSpec)
 axis equal
 hold on, grid on
 plot(M(1), M(2), 'r*')

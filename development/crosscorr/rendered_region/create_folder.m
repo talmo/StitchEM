@@ -4,13 +4,14 @@ function created_path = create_folder(folder_path)
 %   created_path = create_folder(folder_path)
 
 % Get absolute path to the folder
-created_path = GetFullPath(folder_path);
+base_path = GetFullPath(folder_path);
 
 % Add number to name if needed
 folder_num = 1;
+created_path = base_path;
 while exist(created_path, 'dir')
     folder_num = folder_num + 1;
-    created_path = [created_path ' (' num2str(folder_num) ')'];
+    created_path = [base_path ' (' num2str(folder_num) ')'];
 end
 
 % Create folder

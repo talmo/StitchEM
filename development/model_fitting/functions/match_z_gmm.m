@@ -46,7 +46,7 @@ for tA = 1:secA.num_tiles
         end
         
         % Match using Nearest-Neighbor Ratio
-        match_set = nnr_match(region_featsA, region_featsB, unmatched_params);
+        match_set = nnr_match(region_featsA, region_featsB, params.NNR);
         
         % Skip if we didn't find any matches
         if isempty(match_set.A)
@@ -98,6 +98,9 @@ switch params.inlier_cluster
         D1_norm = rownorm2(D1);
         D2_norm = rownorm2(D2);
         k_inliers = 1; if D1_norm > D2_norm; k_inliers = 2; end
+    case 'smallest_var'
+        % Select the cluster with the smallest variance as inliers
+        k_inliers = 1; if mean(var(D1)) > mean(var(D2)); k_inliers = 2; end
     case 'geomedian'
         % Select the cluster that's closest to the overall geometric median
         D_geomedian = geomedian(D);
@@ -141,11 +144,14 @@ p.KeepUnmatched = true;
 p.addOptional('feature_setA', feature_setsA{end}, @(x) validatestr(x, feature_setsA));
 p.addOptional('feature_setB', feature_setsB{end}, @(x) validatestr(x, feature_setsB));
 
+% NNR
+p.addOptional('NNR', struct());
+
 % Columns to keep for the matched features
 p.addParameter('keep_cols', {'local_points', 'global_points'});
 
 % Criteria for establishing cluster as inliers
-inlier_clustering_methods = {'smallest_error', 'geomedian'};
+inlier_clustering_methods = {'smallest_error', 'smallest_var', 'geomedian'};
 p.addParameter('inlier_cluster', 'geomedian', @(x) validatestr(x, inlier_clustering_methods));
 
 % Verbosity

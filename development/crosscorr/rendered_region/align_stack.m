@@ -1,21 +1,30 @@
 %% Parameters
-sec_nums = 1:169;
-base_folder = 'S2-W003_secs1-169_z_aligned[7000,15000]/0.45x,lsq';
+base_folder = 'W002';
+%sec_nums = 1:169;
+%sec_nums = unique(cellfun(@(sec) sec.num, secs));
+sec_nums = get_path_info(waferpath, 'sec_nums');
 
-%% Align
+%sec_nums(sec_nums == 13) = [];
+%sec_nums(sec_nums == 14) = [];
+
+%sec_nums = sec_nums(1:14);
+sec_nums = sec_nums(65:75);
+
 rel_tforms = cell(length(sec_nums), 1);
 tforms = cell(length(sec_nums), 1);
 num_inliers = zeros(length(sec_nums) - 1, 1);
 filtered_errors = zeros(length(sec_nums) - 1, 1);
 aligned_errors = zeros(length(sec_nums) - 1, 1);
+
+%% Align
 total_align_time = tic;
 start_at = 1;
 if exist('stopped_at', 'var')
     start_at = stopped_at;
 end
-for s = 1:2
+for s = start_at:length(sec_nums)
     fprintf('== Aligning section %d (<strong>%d/%d</strong>)\n', sec_nums(s), s, length(sec_nums))
-    stopped_at = 1;
+    stopped_at = s;
     
     if s == 1
         disp('Keeping section fixed.')
@@ -26,14 +35,20 @@ for s = 1:2
     sec_time = tic;
     
     % Load images
-    A = imread(sprintf('%s/S2-W003_Sec%d_Montage.tif', base_folder, sec_nums(s - 1)));
-    B = imread(sprintf('%s/S2-W003_Sec%d_Montage.tif', base_folder, sec_nums(s)));
+%     A = adapthisteq(imread(sprintf('%s/S2-W002_Sec%d_Montage.tif', base_folder, sec_nums(s - 1))));
+%     B = adapthisteq(imread(sprintf('%s/S2-W002_Sec%d_Montage.tif', base_folder, sec_nums(s))));
+    A = imread(sprintf('%s/S2-W002_Sec%d_Montage.tif', base_folder, sec_nums(s - 1)));
+    B = imread(sprintf('%s/S2-W002_Sec%d_Montage.tif', base_folder, sec_nums(s)));
     
     % Find matches
-    [ptsA, ptsB] = xcorr_match(A, B, 'grid_sz', [200, 200], 'block_sz', [150, 150]);
+    [ptsA, ptsB] = xcorr_match(A, B, 'grid_sz', [100, 100], 'block_sz', [150, 150]);
     
     % Filter matches
-    [ptsA, ptsB] = gmm_filter(ptsA, ptsB);
+    try
+        [ptsA, ptsB] = gmm_filter(ptsA, ptsB);
+    catch
+        [ptsA, ptsB] = geomedian_filter(ptsA, ptsB);
+    end
     filtered_errors(s - 1) = rownorm2(ptsB - ptsA);
     num_inliers(s - 1) = length(ptsA);
     
@@ -47,19 +62,19 @@ end
 fprintf('<strong>Done aligning all sections.</strong> [%.2fs]\n\n', toc(total_align_time))
 
 %% Render
-fprintf('Estimating stack spatial reference...\n')
+fprintf('Estimating stack spatial reference...')
 stack_ref_time = tic;
 
 % Find the output spatial reference of each section
 Rs = cell(length(sec_nums), 1);
 for s = 1:length(sec_nums)
-    filepath = sprintf('%s/S2-W003_Sec%d_Montage.tif', base_folder, sec_nums(s));
+    filepath = sprintf('%s/S2-W002_Sec%d_Montage.tif', base_folder, sec_nums(s));
     Rs{s} = tform_spatial_ref(imref2d(imsize(filepath)), tforms{s});
 end
 
 % Merge them to find the spatial reference of the whole stack
 R_stack = merge_spatial_refs(Rs);
-fprintf('Done. [%.2fs]\n', toc(stack_ref_time))
+fprintf(' Done. [%.2fs]\n', toc(stack_ref_time))
 
 % Create output folder
 output_folder = create_folder([base_folder '_aligned']);
@@ -71,9 +86,10 @@ for s = 1:length(sec_nums)
     sec_render_time = tic;
     
     % Load and transform image
-    filename = sprintf('S2-W003_Sec%d_Montage.tif', sec_nums(s));
+    filename = sprintf('S2-W002_Sec%d_Montage.tif', sec_nums(s));
     filepath = [base_folder filesep filename];
     sec_img = imwarp(imread(filepath), tforms{s}, 'OutputView', R_stack);
+    sec_img = adapthiseq(sec_img);
     
     % Save
     imwrite(sec_img, [output_folder filesep filename])
