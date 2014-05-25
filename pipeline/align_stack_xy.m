@@ -75,7 +75,8 @@ status.step = 'finished_xy';
 
 % Save to cache
 disp('=== Saving sections to disk.');
-save(sprintf('%s_secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
+filename = sprintf('%s_Secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num);
+save(get_new_path(fullfile(cachepath, filename)), 'secs', 'status', '-v7.3')
 
 total_xy_time = sum(arrayfun(@(s) secs{s}.runtime.xy.time_elapsed, sec_nums));
 fprintf('==== <strong>Finished XY alignment in %.2fs (%.2fs / section)</strong>.\n\n', total_xy_time, total_xy_time / length(secs));

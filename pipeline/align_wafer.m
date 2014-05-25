@@ -4,8 +4,8 @@
 waferpath('/data/home/talmo/EMdata/S2-W003')
 info = get_path_info(waferpath);
 wafer = info.wafer;
-%sec_nums = info.sec_nums;
-sec_nums = 1:10;
+sec_nums = info.sec_nums;
+%sec_nums = 1:30;
 
 % Load default parameters
 default_params
@@ -40,8 +40,8 @@ default_params
 
 % S2-W003:
 % Section 72 is rotated by quite a bit, but 73 goes back to normal
-params(72).z = ignore_z_error;
-params(73).z = ignore_z_error;
+params(72).z = large_trans;
+params(73).z = rel_to_2previous;
 
 %% Run alignment
 align_stack_xy

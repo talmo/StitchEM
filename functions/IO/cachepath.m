@@ -1,23 +1,32 @@
-function cur_path = cachepath(path)
-%CACHEPATH Gets or sets the cache path.
+function current_path = cachepath(new_path)
+%CACHEPATH Gets or sets the cache path. Creates the folder if it doesn't exist.
+% Usage:
+%   current_path = cachepath
+%   cachepath(new_path)
 
-persistent cache_path;
+global ProgramPaths;
 
+% Update
 if nargin > 0
-    if exist(path, 'dir')
-        cache_path = path;
-    else
-        error('Specified wafer path does not exist.')
-    end
+    ProgramPaths.cache = GetFullPath(new_path);
+    disp('Set cache path.')
 end
 
-if isempty(cache_path)
-    cache_path = GetFullPath(fullfile(mfilename('fullpath'), '../../../cache'));
+% Defaults
+if isempty(ProgramPaths) || ~isfield(ProgramPaths, 'base')
+    ProgramPaths.base = GetFullPath(fullfile(mfilename('fullpath'), '../../..'));
 end
-if ~exist(cache_path, 'dir')
-    error('Current cache path does not exist. Call this function with the path to the cache as the parameter to set it.\nCurrent path: %s', cache_path)
+if ~isfield(ProgramPaths, 'cache')
+    ProgramPaths.cache = fullfile(ProgramPaths.base, 'cache');
+    disp('Cache path not set, using default.')
 end
 
-cur_path = cache_path;
+% Create if doesn't exist
+if ~exist(ProgramPaths.cache, 'dir')
+    mkdir(ProgramPaths.cache);
+end
+
+% Return current
+current_path = ProgramPaths.cache;
 end
 

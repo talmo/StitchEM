@@ -45,7 +45,7 @@ function z_matches = match_z(secA, secB, varargin)
 
 if params.verbosity > 0
     fprintf('== Matching Z features between sections %d and %d\n', secA.num, secB.num)
-	fprintf('Matching feature sets: sec %d -> ''%s'' to sec %d -> ''%s''.\n', secB.num, params.feature_setB, secA.num, params.feature_setA)
+	fprintf('Matching feature sets: Sec%d -> ''%s'' to Sec%d -> ''%s''.\n', secB.num, params.feature_setB, secA.num, params.feature_setA)
 end
 if params.verbosity > 1
     fprintf('Filtering method: %s\n', params.filter_method)
@@ -63,14 +63,14 @@ for tA = 1:secA.num_tiles
     tile_featsA = featuresA.tiles{tA};
     
     % Match with each tile it overlaps with in secB
-    overlapping_tiles = featuresA.overlaps_with{tA};
+    overlapping_tiles = featuresA.overlap_with{tA};
     for tB = overlapping_tiles
         % Get matching tile features
         tile_featsB = featuresB.tiles{tB};
         
         % Find the region numbers of the overlap between the two tiles
-        regionA = find(featuresA.overlaps_with{tA} == tB, 1);
-        regionB = find(featuresB.overlaps_with{tB} == tA, 1);
+        regionA = find(featuresA.overlap_with{tA} == tB, 1);
+        regionB = find(featuresB.overlap_with{tB} == tA, 1);
         
         % Skip if we don't have a matching region in either tile
         if isempty(regionA) || isempty(regionB)
@@ -118,6 +118,7 @@ nnr_matches.A = vertcat(match_setsA{:});
 nnr_matches.B = vertcat(match_setsB{:});
 
 % Filter outliers
+filtering = struct(); % metadata on filtering step
 try
     switch params.filter_method
         case 'gmm'
@@ -129,17 +130,23 @@ try
             inliers = 1:height(nnr_matches);
             outliers = [];
     end
-catch
+    filtering.method = params.filter_method;
+    filtering.used_fallback = false;
+    filtering.exception = [];
+catch ex
     switch params.filter_fallback
         case 'gmm'
             [inliers, outliers] = gmm_filter(nnr_matches, params.GMM);
         case 'geomedian'
-            [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian);
+            [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian.cutoff);
         otherwise
             % Keep all NNR matches as inliers
             inliers = 1:height(nnr_matches);
             outliers = [];
     end
+    filtering.method = params.filter_fallback;
+    filtering.used_fallback = true;
+    filtering.exception = ex;
 end
 
 % Extract the inliers
@@ -147,15 +154,15 @@ z_matches.A = nnr_matches.A(inliers, :);
 z_matches.B = nnr_matches.B(inliers, :);
 
 % Extract the outliers
-outliers.A = nnr_matches.A(outliers, :);
-outliers.B = nnr_matches.B(outliers, :);
+z_outliers.A = nnr_matches.A(outliers, :);
+z_outliers.B = nnr_matches.B(outliers, :);
 if params.keep_outliers
-    z_matches.outliers = outliers;
+    z_matches.outliers = z_outliers;
 end
 
 % Calculate error
 avg_nnr_error = rownorm2(nnr_matches.B.global_points - nnr_matches.A.global_points);
-avg_outlier_error = rownorm2(outliers.B.global_points - outliers.A.global_points);
+avg_outlier_error = rownorm2(z_outliers.B.global_points - z_outliers.A.global_points);
 avg_error = rownorm2(z_matches.B.global_points - z_matches.A.global_points);
 
 % Add metadata
@@ -169,7 +176,9 @@ z_matches.meta.avg_error = avg_error;
 z_matches.meta.avg_nnr_error = avg_nnr_error;
 z_matches.meta.avg_outlier_error = avg_outlier_error;
 z_matches.meta.num_nnr_matches = height(nnr_matches.A);
-z_matches.meta.num_outliers = height(outliers.A);
+z_matches.meta.num_outliers = height(z_outliers.A);
+z_matches.meta.method = 'auto';
+z_matches.meta.filtering = filtering;
 z_matches.params = params;
 
 if params.verbosity > 0; fprintf('Found %d/%d inlier matches. Error before alignment: <strong>%fpx / match</strong>. [%.2fs]\n', ...

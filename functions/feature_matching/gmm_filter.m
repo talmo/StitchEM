@@ -66,6 +66,12 @@ switch params.inlier_cluster
         D2_norm = rownorm2(D2);
         k_inliers = 1; if D1_norm > D2_norm; k_inliers = 2; end
         
+    case 'smallest_var'
+        % Select the cluster with the smallest mean variance
+        D1_var = mean(var(D1));
+        D2_var = mean(var(D2));
+        k_inliers = 1; if D1_var > D2_var; k_inliers = 2; end
+        
     case 'geomedian'
         % Select the cluster that's closest to the overall geometric median
         D_geomedian = geomedian(D);
@@ -95,7 +101,7 @@ p.addParameter('Replicates', 5);
 %   smallest_error: choose the cluster with the smallest error as the inliers
 %   geomedian: choose the cluster with the smallest average distance to the
 %   geometric median as the inliers
-inlier_clustering_methods = {'smallest_error', 'geomedian'};
+inlier_clustering_methods = {'smallest_error', 'smallest_var', 'geomedian'};
 p.addParameter('inlier_cluster', 'geomedian', @(x) validatestr(x, inlier_clustering_methods));
 
 % What to do with warnings

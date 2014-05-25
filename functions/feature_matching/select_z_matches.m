@@ -31,13 +31,13 @@ z_matches.B.global_points = ptsB;
 
 
 z_matches.num_matches = height(z_matches.A);
-z_matches.method = 'manual';
+z_matches.secA = secA.name;
+z_matches.secB = secB.name;
+z_matches.alignmentA = alignmentA;
+z_matches.alignmentB = alignmentB;
+z_matches.match_type = 'z';
+z_matches.meta.method = 'manual';
 z_matches.meta.avg_error = rownorm2(z_matches.B.global_points - z_matches.A.global_points);
-z_matches.meta.all_displacements = z_matches.B.global_points - z_matches.A.global_points;
-z_matches.meta.secA = secA.num;
-z_matches.meta.alignmentA = alignmentA;
-z_matches.meta.secB = secB.num;
-z_matches.meta.alignmentB = alignmentB;
 
 end
 

@@ -22,6 +22,9 @@ function varargout = draw_poly(points, varargin)
 %       disable plotting the points. Defaults to ''.
 %   'VertexLineSpec' is the LineSpec of the vertices. Leave empty to
 %       disable plotting the vertices. Defaults to '.'.
+%   'Axis' calls axis() with its contents as parameters. Defaults to 
+%       {'ij', 'equal'}, which adjusts the axes to match the display style
+%       of an image. See axis() for more.
 %   'KeepPlotColor' is a scalar logical that specifies whether to keep the
 %       plot color fixed. If this is true, repeated calls to this function
 %       will draw polygons with the same color. Defaults to false.
@@ -31,7 +34,7 @@ function varargout = draw_poly(points, varargin)
 %       the vertices of the convex hull of the points P. These are the
 %       vertices of the polygon displayed.
 %
-% See also: draw_polys, plot_regions, get_next_plot_color, ColorSpec
+% See also: draw_polys, plot_regions, get_next_plot_color, ColorSpec, axis
 
 % Process inputs
 [Vx, Vy, Px, Py, params] = parse_inputs(points, varargin{:});
@@ -67,6 +70,11 @@ if ~isempty(params.VertexLineSpec)
     if params.VertexUsePatchColor; ColorParam = {'Color', params.PatchColor}; end
     plot(Vx, Vy, params.VertexLineSpec, ColorParam{:})
     cycle_plot_colors(-1)
+end
+
+% Adjust axis settings
+if ~isempty(params.Axis)
+    axis(params.Axis{:})
 end
 
 % Restore previous hold state
@@ -109,6 +117,9 @@ p.addOptional('PatchSpec', '0.5', @(x) instr(x, ColorPattern, 'r') || instr(x, A
 % Point and vertex specifications
 p.addParameter('PointsLineSpec', '');
 p.addParameter('VertexLineSpec', '.');
+
+% Adjust axes properties
+p.addParameter('Axis', {'ij', 'equal'});
 
 % Keep plot color
 p.addParameter('KeepPlotColor', false);

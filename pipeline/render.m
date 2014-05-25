@@ -1,10 +1,13 @@
 % Stack
-%secs = {secA, secB};
-secs = [secs2(2), secs2(2), secs2(2)];
-alignments = {'rough_xy', 'xy', 'z'};
+secs = secs(sec_nums);
+alignment = 'z';
+
+% Output folder
+folder_name = sprintf('%s_Secs%d-%d_%s', secs{1}.wafer, secs{1}.num, secs{end}.num, alignment);
+render_path = create_folder(fullfile(renderpath, folder_name));
 
 % Clear any loaded images to save memory
-secs = cellfun(@imclear_sec, secs, 'UniformOutput', false);
+%secs = cellfun(@imclear_sec, secs, 'UniformOutput', false);
 
 total_time = tic;
 %% Find stack spatial reference
@@ -12,7 +15,7 @@ tile_Rs = cell(length(secs), 1);
 for s = 1:length(secs)
     % For convenience
     sec = secs{s};
-    tforms = sec.alignments.(alignments{s}).tforms;
+    tforms = sec.alignments.(alignment).tforms;
     
     % Get initial spatial references before alignment
     initial_Rs = cellfun(@imref2d, sec.tile_sizes, 'UniformOutput', false);
@@ -31,7 +34,7 @@ for s = 1:length(secs)
     render_time = tic;
     % Convenience
     sec = secs{s};
-    tforms = sec.alignments.(alignments{s}).tforms;
+    tforms = sec.alignments.(alignment).tforms;
     sec_tile_Rs = tile_Rs{s};
 
     % Transform tiles
@@ -54,11 +57,11 @@ for s = 1:length(secs)
         tiles{t} = [];
     end
 
-    % Write to disk
-    render_path = ['renders' filesep sec.name '-' alignments{s} '.tif'];
-    imwrite(section, render_path);
+    % Write to disk without overwriting existing
+    sec_filename = [sec.name '-' alignment '.tif'];
+    imwrite(section, get_new_path(fullfile(render_path, sec_filename)));
     
     fprintf('Rendered section %d (%d/%d). [%.2fs]\n', sec.num, s, length(secs), toc(render_time))
     clear section tiles sec
 end
-cprintf('*text', 'Done rendering %d sections. [%.2fs]\n', length(secs), toc(total_time));
+fprintf('<strong>Done rendering %d sections. [%.2fs]</strong>\n', length(secs), toc(total_time));

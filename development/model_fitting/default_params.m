@@ -37,7 +37,7 @@ params = repmat(defaults, max(sec_nums), 1);
 %       Or:
 %   for s=10:15; params(s).z.max_match_error = 2000; end
 
-% Presets
+%% Presets
 ignore_z_error = defaults.z;
 ignore_z_error.ignore_error = true;
 fixed_z = defaults.z;

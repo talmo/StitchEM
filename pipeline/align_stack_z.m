@@ -62,13 +62,13 @@ for s = status.section:length(sec_nums)
             secB.features.z = detect_features(secB, 'regions', sec_bb(secA, 'z'), 'alignment', 'prev_z', 'detection_scale', z_params.scale, z_params.SURF);
             
             % Match
-            secB.z_matches = match_z_gmm(secA, secB, 'base_z', 'z', z_params.matching);
+            secB.z_matches = match_z(secA, secB, 'base_z', 'z', z_params.matching);
         case 'manual'
             secB.z_matches = select_z_matches(secA, secB);
     end
     
     % Check for bad matching
-    if secB.z_matches.meta.avg_error > z_params.max_match_error && ~strcmp(z_params.matching.method, 'manual')
+    if secB.z_matches.meta.avg_error > z_params.max_match_error && ~strcmp(z_params.matching_mode, 'manual')
         msg = sprintf('[%s]: Error after matching is very large. This may be because the two sections are misaligned by a large rotation/translation or due to bad matching.', secB.name);
         if z_params.ignore_error
             warning('Z:LargeMatchError', msg)
@@ -116,7 +116,8 @@ status.step = 'finished_z';
 
 % Save to cache
 disp('=== Saving sections to disk.');
-save(sprintf('%s_secs%d-%d_z_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num), 'secs', '-v7.3')
+filename = sprintf('%s_Secs%d-%d_z_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num);
+save(get_new_path(fullfile(cachepath, filename)), 'secs', 'status', '-v7.3')
 
 total_z_time = sum(arrayfun(@(s) secs{s}.runtime.z.time_elapsed, sec_nums));
 fprintf('==== <strong>Finished Z alignment in %.2fs (%.2fs / section)</strong>.\n\n', total_z_time, total_z_time / length(sec_nums));
