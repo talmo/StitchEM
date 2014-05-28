@@ -28,7 +28,7 @@ if ~isempty(new_path)
     if info.exists && (strcmp(info.type, 'wafer') || force)
         new_path = GetFullPath(new_path);
         wafer_path = new_path;
-        disp('<strong>Set wafer path.</strong>')
+        disp('Set wafer path.')
     else
         error('Specified path does not exist or contain a wafer folder.')
     end

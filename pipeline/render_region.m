@@ -1,6 +1,6 @@
 % Stack
-secs = secs(sec_nums);
-alignment = 'z';
+%secs = secs(sec_nums);
+alignment = 'blockcorr';
 
 % Region to render
 regionJ = [27000 28000]; % X
@@ -104,8 +104,8 @@ for s = 1:length(secs)
     end
 
     % Write to disk
-    render_path = [output_folder filesep sec.name '.tif'];
-    imwrite(region, render_path);
+    sec_filename = [sec.name '-' alignment '.tif'];
+    imwrite(region, fullfile(render_path, sec_filename));
     
     fprintf('Rendered section %d (%d/%d). [%.2fs]\n', sec.num, s, length(secs), toc(render_time))
     clear region tiles sec

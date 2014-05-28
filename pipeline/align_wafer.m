@@ -42,6 +42,8 @@ default_params
 % Section 72 is rotated by quite a bit, but 73 goes back to normal
 params(72).z = large_trans;
 params(73).z = rel_to_2previous;
+params(140).z = ignore_z_error;
+params(141).z = rel_to_2previous;
 
 %% Run alignment
 align_stack_xy

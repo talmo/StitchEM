@@ -1,5 +1,6 @@
 % Stack
 secs = secs(sec_nums);
+%secs = {secA, secB};
 alignment = 'z';
 
 % Output folder
@@ -40,7 +41,7 @@ for s = 1:length(secs)
     % Transform tiles
     sec_num = sec.num;
     wafer_path = waferpath;
-    tiles = cell(sec.num_tiles);
+    tiles = cell(sec.num_tiles, 1);
     parfor t = 1:sec.num_tiles
         % Transform tile
         tiles{t} = imwarp(imload_tile(sec_num, t, 1.0, wafer_path), tforms{t}, 'OutputView', sec_tile_Rs{t});

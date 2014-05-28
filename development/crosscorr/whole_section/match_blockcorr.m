@@ -1,22 +1,16 @@
+function matches = match_blockcorr(secA, secB)
+%MATCH_BLOCKCORR Returns matches from block correlation of two sections.
+
 %% Parameters
-grid_sz = 250;
+grid_sz = 2000;
 block_sz = 150;
 search_sz = 75; % around block
-
 clahe_filter = true;
-
-%% Stack
-%load sec_pair.mat
-s = 3;
-secA = secs{s-1};
-secB = secs{s};
-
-% Spatial refs
-[stack_R, sec_Rs] = stack_ref(secs, 'z');
-tile_Rs.A = sec_Rs{s-1};
-tile_Rs.B = sec_Rs{s};
+alignmentA = 'blockcorr';
+alignmentB = 'z';
 
 %% Figure out block grid
+fprintf('== Matching %s and %s by block correlation.\n', secA.name, secB.name)
 % Calculate intersections
 bbA = sec_bb(secA, 'z');
 bbB = sec_bb(secB, 'z');
@@ -38,13 +32,16 @@ blocks = arrayfun(@(x, y) rect2bb(x, y, block_sz), gridX, gridY, 'UniformOutput'
 search_regions = arrayfun(@(x, y) rect2bb(x - search_sz, y - search_sz, 2 * search_sz + block_sz), gridX, gridY, 'UniformOutput', false);
 
 % Eliminate any that intersect with tile bounds
-all_valid = cellfun(@(rI) any(cellfun(@(tI) all(inpolygon(rI(:,1), rI(:,2), tI(:,1), tI(:,2))), tileI)), search_regions);
-all_valid_blocks = blocks(all_valid);
-all_valid_search_regions = search_regions(all_valid);
+%all_valid = cellfun(@(rI) any(cellfun(@(tI) all(inpolygon(rI(:,1), rI(:,2), tI(:,1), tI(:,2))), tileI)), search_regions);
+%all_valid_blocks = blocks(all_valid);
+%all_valid_search_regions = search_regions(all_valid);
 
 %% Matching
 matching_timer = tic;
-disp('Started matching...')
+
+% Spatial refs
+secA_tileRs = sec_refs(secA, alignmentA);
+secB_tileRs = sec_refs(secB, alignmentB);
 
 % Containers
 pair_matchesA = cell(secA.num_tiles, 1);
@@ -54,14 +51,12 @@ parfor tA = 1:secA.num_tiles
     tileA = imload_tile(secA, tA);
     if clahe_filter; tileA = adapthisteq(tileA); end
     tformA = secA.alignments.z.tforms{tA};
-    RA = tile_Rs.A{tA};
+    RA = secA_tileRs{tA};
     tileA = imwarp(tileA, tformA, 'OutputView', RA, 'FillValues', mean(tileA(:)));
     
     tile_matchesA = cell(secB.num_tiles, 1);
     tile_matchesB = cell(secB.num_tiles, 1);
     for tB = 1:secB.num_tiles
-        tileB = [];
-        
         % Get the intersect of tile pair
         tI = intersect_polys(bbA{tA}, bbB{tB});
         
@@ -85,7 +80,7 @@ parfor tA = 1:secA.num_tiles
         tileB = imload_tile(secB, tB);
         if clahe_filter; tileB = adapthisteq(tileB); end
         tformB = secB.alignments.z.tforms{tB};
-        RB = tile_Rs.B{tB};
+        RB = secB_tileRs{tB};
         tileB = imwarp(tileB, tformB, 'OutputView', RB, 'FillValues', mean(tileB(:)));
         
         % Match each block
@@ -171,62 +166,9 @@ matches.meta.num_total_matches = num_total_matches;
 matches.meta.runtime = toc(matching_timer);
 
 fprintf('Finished matching in <strong>%.2fs</strong> (<strong>%.2fs/block</strong>).\n', matches.meta.runtime, matches.meta.runtime / matches.meta.num_total_matches)
-fprintf('<strong>Before filtering</strong>: %f px/match (n = %d)\n', matches.meta.avg_total_error, matches.meta.num_total_matches)
-fprintf('<strong>After filtering</strong>: %f px/match (n = %d)\n', matches.meta.avg_error, matches.num_matches)
-    
-% Align (CPD)
-% Solve alignment transform
-tform = cpd_solve(matches.A.global_points, matches.B.global_points, 'method', 'affine', 'viz', false);
+fprintf('Before filtering: %f px/match (n = %d)\n', matches.meta.avg_total_error, matches.meta.num_total_matches)
+fprintf('After filtering: <strong>%f px/match (n = %d)</strong>\n', matches.meta.avg_error, matches.num_matches)
 
-% Calculate errors
-%avg_prior_error = rownorm2(matches.B.global_points - matches.A.global_points);
-avg_post_error = rownorm2(tform.transformPointsForward(matches.B.global_points) - matches.A.global_points);
 
-%fprintf('<strong>Prior error</strong>: %f px/match\n', avg_prior_error)
-fprintf('<strong>After alignment</strong>: %f px/match\n', avg_post_error)
-
-return
-%% Align (LSQ)
-% Solve alignment transform
-T = [matches.B.global_points ones(matches.num_matches, 1)] \ [matches.A.global_points ones(matches.num_matches, 1)];
-tform = affine2d([T(:, 1:2) [0 0 1]']);
-
-% Calculate errors
-prior_error = rownorm2(matches.B.global_points - matches.A.global_points);
-post_error = rownorm2(tform.transformPointsForward(matches.B.global_points) - matches.A.global_points);
-
-fprintf('<strong>Prior error</strong>: %f px/match\n', prior_error)
-fprintf('<strong>Post error</strong>: %f px/match\n', post_error)
-
-%% Create alignment structures
-% secA
-secA.alignments.blockcorr = fixed_alignment(secA, 'z');
-
-% secB
-rel_to = 'z';
-alignment.tforms = compose_tforms(secB.alignments.(rel_to).tforms, tform);
-alignment.rel_tforms = repmat({tform}, size(alignment.tforms));
-alignment.rel_to = 'z';
-alignment.meta.avg_prior_error = matches.meta.avg_error;
-alignment.meta.avg_post_error = avg_post_error;
-alignment.meta.method = 'z_block_correlation';
-secB.alignments.blockcorr = alignment;
-
-%% Visualize grid
-figure
-draw_poly(bbWorld, 'g0.1'), hold on
-draw_polys(tileI, 'y0.3')
-draw_polys(all_valid_search_regions, 'b0.4')
-draw_polys(all_valid_blocks, 'r0.5')
-plot(gridX, gridY, 'k+')
-
-%% Visualize displacements
-figure
-plot_displacements(matches)
-
-%% Visualize matches
-figure
-plot_section(secA, 'z', 'r0.1')
-plot_section(secB, 'z', 'g0.1')
-plot_matches(matches)
+end
 

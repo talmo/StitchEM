@@ -104,7 +104,6 @@ end
 % Adjust plot
 axis equal
 grid on
-%title(['\bfDisplacements\rm: ' sprintf('n = %d/%d inliers', size(inD, 1), size(D, 1))])
 title(sprintf('\\bfDisplacements\\rm: n = %d/%d inliers', size(inD, 1), size(D, 1)))
 xlabel('\deltaX')
 ylabel('\deltaY')

@@ -2,7 +2,7 @@
 s = 2;
 sec = secs{s};
 alignment = 'xy';
-scale = 1.0;
+scale = 0.05;
 use_stack_ref = false;
 
 render_path = ['renders' filesep sec.name '-' alignment '.tif'];
