@@ -158,6 +158,10 @@ avg_outlier_error = rownorm2(matches.outliers.B.global_points - matches.outliers
 
 % Add metadata
 matches.num_matches = height(matches.A);
+matches.secA = secA.name;
+matches.secB = secB.name;
+matches.alignmentA = alignmentA;
+matches.alignmentB = alignmentB;
 matches.meta.avg_error = avg_error;
 matches.meta.avg_outlier_error = avg_outlier_error;
 matches.meta.avg_total_error = avg_total_error;

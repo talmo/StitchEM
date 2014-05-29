@@ -49,7 +49,8 @@ if instr(opt.method, {'rigid', 'affine'})
     tform = affine2d([[cpd_tform.s * cpd_tform.R'; cpd_tform.t'] [0 0 1]']);
 elseif strcmp(opt.method, 'nonrigid')
     % TODO
-    error('Nonrigid transform not yet implemented.')
+    %warning('Nonrigid transform not yet implemented.')
+    tform = CPDNonRigid(cpd_tform);
 end
 
 if opt.verbosity > 0

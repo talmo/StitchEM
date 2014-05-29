@@ -19,9 +19,9 @@ for s = status.section:length(sec_nums)
     fprintf('=== Aligning %s (<strong>%d/%d</strong>) in XY\n', get_path_info(get_section_path(sec_nums(s)), 'name'), s, length(sec_nums))
     if ~isempty(secs{s}) && isfield(secs{s}.alignments, 'xy')
         if xy_params.overwrite
-            warning('Section is already aligned, but will be overwritten.')
+            warning('XY:AlignedSecOverwritten', 'Section is already aligned, but will be overwritten.')
         else
-            error('Section is already aligned.')
+            error('XY:AlignedSecNotOverwritten', 'Section is already aligned.')
         end
     end
     
@@ -29,7 +29,7 @@ for s = status.section:length(sec_nums)
     sec = load_section(sec_nums(s), 'scales', xy_params.scales);
 
     % Rough alignment
-    sec.alignments.rough_xy = rough_align_xy(sec);
+    sec.alignments.rough_xy = rough_align_xy(sec, xy_params.rough);
 
     % Detect XY features
     sec.features.xy = detect_features(sec, 'regions', 'xy', xy_params.SURF);
@@ -39,7 +39,7 @@ for s = status.section:length(sec_nums)
     
     % Check for bad matching
     if sec.xy_matches.meta.avg_error > xy_params.max_match_error
-        msg = sprintf('[%s]: Error after matching is very large. This may be due to bad match filtering.', sec.name);
+        msg = sprintf('[%s]: Error after matching is very large. This may be due to bad rough alignment or match filtering.', sec.name);
         if xy_params.ignore_error
             warning('XY:LargeMatchError', msg)
         else
@@ -54,9 +54,9 @@ for s = status.section:length(sec_nums)
     if sec.alignments.xy.meta.avg_post_error > xy_params.max_aligned_error
         msg = sprintf('[%s]: Error after alignment is very large. This may be due to bad matching.', sec.name);
         if xy_params.ignore_error
-            warning('Z:LargeAlignmentError', msg)
+            warning('XY:LargeAlignmentError', msg)
         else
-            error('Z:LargeAlignmentError', msg)
+            error('XY:LargeAlignmentError', msg)
         end
     end
     
@@ -74,9 +74,10 @@ end
 status.step = 'finished_xy';
 
 % Save to cache
-disp('=== Saving sections to disk.');
+disp('=== Saving sections to disk.'); save_timer = tic;
 filename = sprintf('%s_Secs%d-%d_xy_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num);
 save(get_new_path(fullfile(cachepath, filename)), 'secs', 'status', '-v7.3')
+fprintf('Saved to: %s [%.2fs]\n', fullfile(cachepath, filename), toc(save_timer))
 
-total_xy_time = sum(arrayfun(@(s) secs{s}.runtime.xy.time_elapsed, sec_nums));
+total_xy_time = sum(cellfun(@(sec) sec.runtime.xy.time_elapsed, secs));
 fprintf('==== <strong>Finished XY alignment in %.2fs (%.2fs / section)</strong>.\n\n', total_xy_time, total_xy_time / length(secs));

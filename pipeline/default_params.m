@@ -1,7 +1,10 @@
 %% Defaults: XY alignment
 % General
-defaults.xy.overwrite = true; % throws error if section is already XY aligned
+defaults.xy.overwrite = false; % throws error if section is already XY aligned
 defaults.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
+
+% Rough alignment
+defaults.xy.rough.align_to_overview = true;
 
 % [detect_features] Feature detection (1.0x)
 defaults.xy.SURF.MetricThreshold = 11000; % for full res tiles
@@ -29,7 +32,7 @@ defaults.xy.ignore_error = false; % still throws warning if true
 
 %% Defaults: Z alignment
 % General
-defaults.z.overwrite = true; % throws error if section is already Z aligned
+defaults.z.overwrite = false; % throws error if section is already Z aligned
 defaults.z.rel_to = -1; % relative section to align to
 
 % [detect_features] Feature detection (0.125x)
@@ -64,21 +67,29 @@ defaults.z.ignore_error = false; % only throws warning if true
 params = repmat(defaults, max(sec_nums), 1);
 
 %% Presets for custom per-section parameters
+% Presets for XY alignment:
+xy_presets.grid_align = defaults.xy;
+xy_presets.grid_align.max_match_error = inf;
+xy_presets.grid_align.rough.align_to_overview = false;
+xy_presets.gmm_filter = defaults.xy;
+xy_presets.gmm_filter.matching.filter_method = 'gmm';
+xy_presets.gmm_filter.matching.filter_fallback = 'geomedian';
+
 % Presets for Z alignment:
-ignore_z_error = defaults.z;
-ignore_z_error.ignore_error = true;
-fixed_z = defaults.z;
-fixed_z.alignment_method = 'fixed';
-rel_to_2previous = defaults.z;
-rel_to_2previous.rel_to = -2;
-rel_to_3previous = defaults.z;
-rel_to_3previous.rel_to = -3;
-large_trans = defaults.z;
-large_trans.max_match_error = inf;
-large_trans.matching.inlier_cluster = 'smallest_var';
-manual_matching = defaults.z;
-manual_matching.matching_mode = 'manual';
-manual_matching.max_aligned_error = 250;
-low_res = defaults.z;
-low_res.scale = 0.075;
-low_res.SURF.MetricThreshold = 1000;
+z_presets.ignore_z_error = defaults.z;
+z_presets.ignore_z_error.ignore_error = true;
+z_presets.fixed_z = defaults.z;
+z_presets.fixed_z.alignment_method = 'fixed';
+z_presets.rel_to_2previous = defaults.z;
+z_presets.rel_to_2previous.rel_to = -2;
+z_presets.rel_to_3previous = defaults.z;
+z_presets.rel_to_3previous.rel_to = -3;
+z_presets.large_trans = defaults.z;
+z_presets.large_trans.max_match_error = inf;
+z_presets.large_trans.matching.inlier_cluster = 'smallest_var';
+z_presets.manual_matching = defaults.z;
+z_presets.manual_matching.matching_mode = 'manual';
+z_presets.manual_matching.max_aligned_error = 250;
+z_presets.low_res = defaults.z;
+z_presets.low_res.scale = 0.075;
+z_presets.low_res.SURF.MetricThreshold = 1000;

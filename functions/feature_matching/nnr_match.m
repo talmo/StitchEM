@@ -50,7 +50,7 @@ switch params.out
         matches.A = A(indexPairs(:, 1), :);
         matches.B = B(indexPairs(:, 2), :);
     case 'rows-nodesc'
-        nodesc = ~strcmp('descriptors', feats.Properties.VariableNames);
+        nodesc = ~strcmp('descriptors', A.Properties.VariableNames);
         matches.A = A(indexPairs(:, 1), nodesc);
         matches.B = B(indexPairs(:, 2), nodesc);
 end

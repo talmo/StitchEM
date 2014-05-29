@@ -30,7 +30,6 @@ end
 grid on
 axis equal
 ax2int()
-append_title(sprintf('Section %d | Alignment: %s', sec.num, alignment), 'Interpreter', 'none')
-
+append_title(strrep(sprintf('\\bfSection\\rm: %s | \\bfAlignment\\rm: %s', sec.name, alignment), '_', '\_'))
 end
 

@@ -19,7 +19,7 @@ for s = status.section:length(sec_nums)
     
     % Check for existing alignment
     if isfield(secs{s}.alignments, 'z') && ~z_params.overwrite
-        error('Section is already Z aligned. Set its ''overwrite'' parameter to true to overwrite alignment.')
+        error('Z:AlignedSecNotOverwritten', 'Section is already Z aligned. Set its ''overwrite'' parameter to true to overwrite alignment.')
     end
     
     % Keep first section fixed
@@ -115,9 +115,10 @@ secs{end} = imclear_sec(secs{end});
 status.step = 'finished_z';
 
 % Save to cache
-disp('=== Saving sections to disk.');
+disp('=== Saving sections to disk.'); save_timer = tic;
 filename = sprintf('%s_Secs%d-%d_z_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num);
 save(get_new_path(fullfile(cachepath, filename)), 'secs', 'status', '-v7.3')
+fprintf('Saved to: %s [%.2fs]\n', fullfile(cachepath, filename), toc(save_timer))
 
-total_z_time = sum(arrayfun(@(s) secs{s}.runtime.z.time_elapsed, sec_nums));
-fprintf('==== <strong>Finished Z alignment in %.2fs (%.2fs / section)</strong>.\n\n', total_z_time, total_z_time / length(sec_nums));
+total_z_time = sum(cellfun(@(sec) sec.runtime.z.time_elapsed, secs));
+fprintf('==== <strong>Finished Z alignment in %.2fs (%.2fs / section)</strong>.\n\n', total_z_time, total_z_time / length(secs));

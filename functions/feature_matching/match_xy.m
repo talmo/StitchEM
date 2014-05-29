@@ -64,7 +64,7 @@ for tA = 1:sec.num_tiles - 1
                     [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian.cutoff);
                 otherwise
                     % Keep all NNR matches as inliers
-                    inliers = 1:height(nnr_matches);
+                    inliers = 1:height(nnr_matches.A);
                     outliers = [];
             end
         catch
@@ -75,7 +75,7 @@ for tA = 1:sec.num_tiles - 1
                     [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian.cutoff);
                 otherwise
                     % Keep all NNR matches as inliers
-                    inliers = 1:height(nnr_matches);
+                    inliers = 1:height(nnr_matches.A);
                     outliers = [];
             end
         end

@@ -1,23 +1,28 @@
-function plot_tile(sec, tile, alignment, PatchSpec)
+function plot_tile(sec, tile, alignment, PatchSpec, no_title)
 %PLOT_TILE Plots the bounding box of the specified tile.
 % Usage:
 %   plot_tile(sec)
 %   plot_tile(sec, tile)
 %   plot_tile(sec, tile, alignment)
 %   plot_tile(sec, tile, alignment, PatchSpec)
+%   plot_tile(sec, tile, alignment, PatchSpec, no_title)
 %
 % See also: plot_section, plot_regions, draw_poly
 
-if nargin < 2
+if nargin < 2 || isempty(tile)
     tile = 1;
 end
-if nargin < 3
+if nargin < 3 || isempty(alignment)
     alignments = fieldnames(sec.alignments);
     alignment = alignments{end};
 end
-if nargin < 4
+if nargin < 4 || isempty(PatchSpec)
     PatchSpec = '0.1';
 end
+if nargin < 5
+    no_title = false;
+end
+
 
 % Get bounding boxes
 bounding_boxes = sec_bb(sec, alignment);
@@ -34,7 +39,8 @@ end
 grid on
 axis equal
 ax2int()
-append_title(sprintf('Section %d | Tile %d | Alignment: %s', sec.num, tile, alignment), 'Interpreter', 'none')
-
+if ~no_title
+    append_title(sprintf('Section %d | Tile %d | Alignment: %s', sec.num, tile, alignment), 'Interpreter', 'none')
+end
 end
 

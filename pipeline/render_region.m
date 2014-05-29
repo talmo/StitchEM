@@ -1,6 +1,6 @@
 % Stack
 %secs = secs(sec_nums);
-alignment = 'blockcorr';
+alignment = 'z';
 
 % Region to render
 regionJ = [27000 28000]; % X

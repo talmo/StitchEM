@@ -29,4 +29,4 @@ end
 % Save
 disp('=== Saving sections to disk.');
 filename = sprintf('%s_Secs%d-%d_blockcorr_aligned.mat', secs{1}.wafer, secs{1}.num, secs{end}.num);
-save(get_new_path(fullfile(cachepath, filename)), 'secs', 'status', '-v7.3')
+save(get_new_path(fullfile(pwd, filename)), 'secs', 'status', '-v7.3')

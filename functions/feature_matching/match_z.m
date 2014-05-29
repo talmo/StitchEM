@@ -127,7 +127,7 @@ try
             [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian);
         otherwise
             % Keep all NNR matches as inliers
-            inliers = 1:height(nnr_matches);
+            inliers = 1:height(nnr_matches.A);
             outliers = [];
     end
     filtering.method = params.filter_method;
@@ -141,7 +141,7 @@ catch ex
             [inliers, outliers] = geomedian_filter(nnr_matches, params.geomedian.cutoff);
         otherwise
             % Keep all NNR matches as inliers
-            inliers = 1:height(nnr_matches);
+            inliers = 1:height(nnr_matches.A);
             outliers = [];
     end
     filtering.method = params.filter_fallback;

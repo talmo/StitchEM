@@ -13,6 +13,7 @@ base_path = fullfile(pathstr, name);
 num = 1;
 new_path = [base_path ext];
 while exist(new_path)
+    num = num + 1;
     new_path = [base_path '(' num2str(num) ')' ext];
 end
 end

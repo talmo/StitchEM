@@ -31,6 +31,9 @@ end
 % Check if template has any variation
 if std(double(B(:))) == 0
     warning('Image B has no variation, cannot perform cross-correlation.')
+    ptA = [];
+    ptB = [];
+    peakVal = [];
     return
 end
 
