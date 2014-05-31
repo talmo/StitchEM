@@ -54,13 +54,12 @@ params(105).xy.gmm_filter.matching.filter_fallback = 'geomedian';
 params(118).xy.max_match_error = inf;
 params(130).xy = xy_presets.grid_align;
 params(131).xy.max_match_error = inf;
+params(141).xy.max_match_error = inf;
 
 %% Run alignment
-% align_stack_xy
 try
     align_stack_xy
-catch xy_error
-    troubleshoot_xy
-    rethrow(xy_error)
+    align_stack_z
+catch alignment_error
+    troubleshoot
 end
-align_stack_z

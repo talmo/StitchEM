@@ -1,4 +1,4 @@
-fprintf('=== <strong>Troubleshooting XY error</strong>: %s (%d/%d)\n', sec.name, status.section, length(secs))
+fprintf('<strong>\n\n=== Troubleshooting XY: %s (%d/%d)</strong>\n', sec.name, status.section, length(secs))
 
 %% Matching
 % Get matches
@@ -30,27 +30,26 @@ disp('Check xy_params.matching for info on parameters used.')
 %% Alignment
 disp('== <strong>Alignment</strong>:')
 % Check if section has alignment
-last_alignment = [];
-if (exist('xy_error', 'var') && strcmp(xy_error.identifier, 'XY:LargeMatchError')) || ...
+attempted_alignment = [];
+if (exist('alignment_error', 'var') && strcmp(alignment_error.identifier, 'XY:LargeMatchError')) || ...
         ~isfield(sec.alignments, 'xy')
     % Try to align anyway
     try
-        last_alignment = align_xy(sec, xy_params.align, 'verbosity', 0);
+        attempted_alignment = align_xy(sec, xy_params.align, 'verbosity', 0);
         disp('Estimated alignment with potentially bad matches.')
         disp('If a good alignment was achieved despite a high matching error, you can ignore the matching error by adding the following line to the custom per-section parameters:')
         fprintf('\tparams(%d).xy.max_match_error = inf;\n', sec.num)
     catch
         disp('Section does not have XY alignment and it was not possible to estimate an alignment with the current matches.')
     end
+    fprintf('<strong>Prior error</strong>: %f px/match\n', attempted_alignment.meta.avg_prior_error)
+    fprintf('<strong>Post error</strong>: %f px/match\n', attempted_alignment.meta.avg_post_error)
 elseif isfield(sec.alignments, 'xy')
-    last_alignment = sec.alignments.xy;
+    disp('Alignment error:')
+    fprintf('<strong>Prior error</strong>: %f px/match\n', sec.alignments.xy.meta.avg_prior_error)
+    fprintf('<strong>Post error</strong>: %f px/match\n', sec.alignments.xy.meta.avg_post_error)
 end
 
-if ~isempty(last_alignment)
-    fprintf('<strong>Prior error</strong>: %f px/match\n', last_alignment.meta.avg_prior_error)
-    fprintf('<strong>Post error</strong>: %f px/match\n', last_alignment.meta.avg_post_error)
-    disp('Run ''<strong>show_sec(sec, last_alignment)</strong>'' to view the rendered section.')
-end
 disp('Check xy_params.align for info on parameters used.')
 
 %% Visualize
@@ -62,10 +61,20 @@ append_title(sprintf('\\bfInliers\\rm: %.2fpx/match (n = %d) | \\bfOutliers\\rm:
     last_xy_matches.meta.avg_outlier_error, last_xy_matches.meta.num_outliers))
 
 % Plot aligned section
-if ~isempty(last_alignment)
-    figure
-    sec.alignments.last_alignment = last_alignment;
-    plot_section(sec, 'last_alignment', 'r0.1')
-    sec.alignments = rmfield(sec.alignments, 'last_alignment');
+if ~isempty(attempted_alignment)
+    figure, plot_section(sec, attempted_alignment, 'r0.1')
+elseif isfield(sec.alignments, 'xy')
+    figure, plot_section(sec, 'xy', 'r0.1')
 end
 
+%% Suggestions
+fprintf('\n<strong>Suggested next steps:</strong>\n')
+disp('- View the features: <strong>plot_xy_features(sec)</strong> or <strong>plot_xy_features(sec, tile)</strong>')
+disp('- View rough alignment: <strong>plot_rough_xy(sec)</strong> and <strong>plot_matches(last_xy_matches)</strong>')
+disp('- View the rendered section: <strong>show_sec(sec)</strong> or <strong>show_sec(sec, attempted_alignment)</strong>')
+fprintf('- Try ignoring the matching error: <strong>params(%d).xy.max_match_error = inf;</strong>\n', sec.num)
+disp('- Try using a different parameter preset:')
+fprintf('\t<strong>params(%d).xy = xy_presets.grid_align; %% Use grid alignment for rough alignment step</strong>\n', sec.num)
+fprintf('\t<strong>params(%d).xy = xy_presets.gmm_filter; %% Use GMM to filter matches</strong>\n', sec.num)
+fprintf('\n<strong>Original error</strong>:\n')
+rethrow(alignment_error)

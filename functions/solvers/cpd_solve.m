@@ -15,11 +15,14 @@ function tform = cpd_solve(ptsA, ptsB, varargin)
 % See also: align_z_pair_cpd, sp_lsq
 
 % Default options
-methods = {'rigid', 'affine', 'nonrigid'};
+methods = {'rigid', 'affine', 'nonrigid', 'nonrigid_lowrank'};
 defaults.method = 'affine'; 
 defaults.viz = false;
 defaults.savegif = false;
 defaults.verbosity = 0;
+% nonrigid_lowrank:
+defaults.numeig = 30; % number of eigenvectors to leave to estimate G
+defaults.eigfgt = true; % use FGT to find eigenvectors (avoids explicitly computing G)
 
 if nargin < 3
     opt = defaults;
@@ -42,19 +45,24 @@ end
 if opt.verbosity > 0; fprintf('Calculating alignment using CPD (%s)...\n', opt.method); end
 total_time = tic;
 
-% Solve using CPD
-cpd_tform = cpd_register(ptsA, ptsB, opt);
-
-if instr(opt.method, {'rigid', 'affine'})
-    tform = affine2d([[cpd_tform.s * cpd_tform.R'; cpd_tform.t'] [0 0 1]']);
-elseif strcmp(opt.method, 'nonrigid')
-    % TODO
-    %warning('Nonrigid transform not yet implemented.')
-    tform = CPDNonRigid(cpd_tform);
+switch opt.method
+    case {'rigid', 'affine'}
+        % Solve (ptsB -> ptsA)
+        T = cpd_register(ptsA, ptsB, opt);
+        
+        % Return as affine transformation matrix
+        tform = affine2d([[T.s * T.R'; T.t'] [0 0 1]']);
+        
+    case {'nonrigid', 'nonrigid_lowrank'}
+        % Solve (inverse: ptsA -> ptsB)
+        T = cpd_register(ptsB, ptsA, opt);
+        
+        % Create CPDNonRigid class
+        tform = CPDNonRigid(T);
 end
 
 if opt.verbosity > 0
-    fprintf('Done. Error: <strong>%fpx / match</strong> [%.2fs]\n', rownorm2(tform.transformPointsForward(ptsB) - ptsA), toc(total_time))
+    fprintf('Done. Error: <strong>%fpx / match</strong> [%.2fs]\n', rownorm2(ptsB - tform.transformPointsInverse(ptsA)), toc(total_time))
 end
 end
 

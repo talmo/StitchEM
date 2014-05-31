@@ -43,23 +43,9 @@ params(135).z = z_presets.large_trans;
 params(136).z = z_presets.large_trans;
 
 %% Run alignment
-% XY
 try
     align_stack_xy
-catch xy_error
-    warning(xy_error.message)
-    troubleshoot_xy
-end
-
-% Z
-try
     align_stack_z
-catch z_error
-    warning(z_error.message)
-    switch z_error.identifier
-        case {'Z:LargeMatchError', 'Z:LargeAlignmentError'}
-            plot_displacements(secB.z_matches)
-        otherwise
-            
-    end
+catch alignment_error
+    troubleshoot
 end

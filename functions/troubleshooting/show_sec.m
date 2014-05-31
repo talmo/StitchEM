@@ -12,10 +12,11 @@ if nargin < 2
     alignments = fieldnames(sec.alignments);
     alignment = alignments{end};
 end
+[~, alignment_name] = validatealignment(alignment, sec);
 
 % Scale
 if nargin < 3
-    scale = 0.075;
+    scale = 0.050;
 end
 
 % Render
@@ -24,9 +25,14 @@ end
 % Show
 figure
 imshow(rendered, R)
-title(strrep(sprintf('\\bf%s\\rm (%sx)', sec.name, num2str(scale)), '_', '\_'))
-if ischar(alignment)
-    append_title(strrep(sprintf('\\bfAlignment\\rm: %s', alignment), '_', '\_'))
+
+% Adjust figure
+title_str = sprintf('\\bfSection\\rm: %s (%sx) | \\bfAlignment\\rm: %s', sec.name, num2str(scale), alignment_name);
+if isfield(alignment, 'meta') && isfield(alignment.meta, 'avg_post_error')
+    title_str = sprintf('%s | \\bfError\\rm: %.3f px/match', title_str, alignment.meta.avg_post_error);
 end
+append_title(strrep(title_str, '_', '\_'))
+ax2int()
+
 end
 

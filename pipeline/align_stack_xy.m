@@ -17,6 +17,8 @@ for s = status.section:length(sec_nums)
     xy_params = params(sec_nums(s)).xy;
     
     fprintf('=== Aligning %s (<strong>%d/%d</strong>) in XY\n', get_path_info(get_section_path(sec_nums(s)), 'name'), s, length(sec_nums))
+    
+    % Check for overwrite
     if ~isempty(secs{s}) && isfield(secs{s}.alignments, 'xy')
         if xy_params.overwrite
             warning('XY:AlignedSecOverwritten', 'Section is already aligned, but will be overwritten.')
@@ -25,8 +27,16 @@ for s = status.section:length(sec_nums)
         end
     end
     
-    % Load section
-    sec = load_section(sec_nums(s), 'scales', xy_params.scales);
+    % Section structure
+    if ~exist('sec', 'var') || sec.num ~= sec_nums(s) ...
+            || ~isempty(setdiff([xy_params.scales{2:2:end}], structfun(@(t) t.scale, sec.tiles))) ... % Check if we have the tile images at the required scales
+            || isempty(sec.overview.img)
+        % Load section
+        sec = load_section(sec_nums(s), 'scales', xy_params.scales);
+    else
+        % Use section in the workspace
+        disp('Using section that was already loaded. Clear ''sec'' to reload the section.')
+    end
 
     % Rough alignment
     sec.alignments.rough_xy = rough_align_xy(sec, xy_params.rough);

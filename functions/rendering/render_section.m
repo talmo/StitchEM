@@ -16,26 +16,14 @@ function [section, section_R] = render_section(sec, alignment, varargin)
 
 % Parse parameters
 params = parse_inputs(varargin{:});
-
 total_time = tic;
-if params.verbosity > 0; fprintf('Rendering section <strong>%s</strong> (%sx).', sec.name, num2str(params.scale)); end
 
-%% Alignment
-if ischar(alignment)
-    alignment = validatestring(alignment, fieldnames(sec.alignments), mfilename);
-    tforms = sec.alignments.(alignment).tforms;
-elseif isstruct(alignment)
-    assert(isfield(alignment, 'tforms'))
-    tforms = alignment.tforms;
-elseif iscell(alignment)
-    assert(all(cellfun(@(t) isa(t, 'affine2d'), alignment)))
-    tforms = alignment;
-end
-assert(numel(tforms) == sec.num_tiles)
+% Validate alignment and get transforms
+[alignment, alignment_name] = validatealignment(alignment, sec);
+tforms = alignment.tforms;
 
-if params.verbosity > 0; fprintf('.'); end
+if params.verbosity > 0; fprintf('Rendering section <strong>%s</strong> (%sx | %s).', sec.name, num2str(params.scale), alignment_name); end
 
-%% Render section
 % Figure out tile paths
 if isfield(sec, 'tile_paths')
     tile_paths = sec.tile_paths;
@@ -43,14 +31,33 @@ elseif isfield(sec, 'tile_files') && isfield(sec, 'path')
     tile_paths = fullfile(sec.path, sec.tile_files);
 end
 
-% Load and transform tiles
+% Initialize
 tiles = cell(sec.num_tiles, 1);
 sizes = sec.tile_sizes;
 Rs = cell(sec.num_tiles, 1);
+
+% Use pre-loaded tiles if available
+pre_scale = 1.0;
+if ~isempty(sec.tiles)
+    tile_set = closest_tileset(sec, params.scale);
+    if ~isempty(tile_set)
+        tiles = sec.tiles.(tile_set).img;
+        pre_scale = sec.tiles.(tile_set).scale;
+    end
+end
+
+% Transform tiles
 parfor t = 1:sec.num_tiles
-    % Load and resize if needed
-    tile = imread(tile_paths{t});
-    if params.scale ~= 1.0; tile = imresize(tile, params.scale); end
+    % Load tile
+    tile = tiles{t};
+    scale = params.scale / pre_scale;
+    if ~isempty(tiles{t})
+        tile = imread(tile_paths{t});
+        scale = params.scale;
+    end
+    
+    % Resize (if needed)
+    if params.scale ~= 1.0; tile = imresize(tile, scale); end
     
     % Adjust spatial ref for resolution
     [XLims, YLims] = sz2lims(sizes{t});
@@ -69,6 +76,7 @@ end
 
 % Blend tiles into section
 section = zeros(section_R.ImageSize, 'uint8');
+halfway = floor(median(1,sec.num_tiles));
 for t = 1:sec.num_tiles
     % Find tile subscripts within section image
     [I, J] = ref2subs(Rs{t}, section_R);
@@ -76,6 +84,7 @@ for t = 1:sec.num_tiles
     % Blend into section
     section(I(1):I(2), J(1):J(2)) = max(section(I(1):I(2), J(1):J(2)), tiles{t});
     tiles{t} = [];
+    if params.verbosity > 0 && t == halfway; fprintf('.'); end
 end
 
 if params.verbosity > 0; fprintf(' Done. [%.2fs]\n', toc(total_time)); end

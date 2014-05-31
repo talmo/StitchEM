@@ -62,7 +62,7 @@
 %     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 
-function  [C, W, sigma2, iter, T] =cpd_GRBF_lowrank(X, Y, beta, lambda, max_it, tol, viz, outliers, fgt, numeig, eigfgt, corresp, sigma2);
+function  [C, W, sigma2, iter, T] =cpd_GRBF_lowrank(X, Y, beta, lambda, max_it, tol, viz, outliers, fgt, numeig, eigfgt, corresp, sigma2, savegif, verbosity)
 
 [N, D]=size(X); [M, D]=size(Y);
 
@@ -92,7 +92,7 @@ while (iter<max_it) && (ntol > tol) && (sigma2 > 1e-8)
     
     L=L+lambda/2*trace(QtW'*S*QtW);
     ntol=abs((L-L_old)/L);
-    disp([' CPD nonrigid ' st ' (lowrank)  : dL= ' num2str(ntol) ', iter= ' num2str(iter) ' sigma2= ' num2str(sigma2)]);
+    if verbosity > 0; disp([' CPD nonrigid ' st ' (lowrank)  : dL= ' num2str(ntol) ', iter= ' num2str(iter) ' sigma2= ' num2str(sigma2)]); end
 
     % M-step. Solve linear system for W.
     dP=spdiags(P1,0,M,M); % precompute diag(P)
@@ -109,14 +109,33 @@ while (iter<max_it) && (ntol > tol) && (sigma2 > 1e-8)
     Np=sum(P1);sigma2save=sigma2;
     sigma2=abs(sum(sum(X.^2.*repmat(Pt1,1,D)))+sum(sum(T.^2.*repmat(P1,1,D))) -2*trace(PX'*T) )/(Np*D);
     
-    % Plot the result on current iteration
-    if viz, cpd_plot_iter(X, T); end;
-
     iter=iter+1;
+    
+    % Plot the result on current iteration
+    if viz, cpd_plot_iter(X, T); end
+
+    if savegif
+        % Save frame as gif
+        f = getframe(gcf);
+        if iter == 1
+            pos = get(gcf, 'Position');
+            width = pos(3); height = pos(4);
+            mov = zeros(height, width, 1, max_it, 'uint8');
+            [mov(:,:,1,iter), map] = rgb2ind(f.cdata, 256, 'nodither');
+        else
+            mov(:,:,1,iter) = rgb2ind(f.cdata, map, 'nodither');
+        end
+    end
 
 end
 
-disp('CPD registration succesfully completed.');
+if savegif
+    mov = mov(:,:,:,1:iter);
+    % Save to gif
+    imwrite(mov, map, 'animation.gif', 'DelayTime', 0, 'LoopCount', inf);
+end
+
+if verbosity > 0; disp('CPD registration succesfully completed.'); end
 
 %Find the correspondence, such that Y corresponds to X(C,:)
 if corresp, C=cpd_Pcorrespondence(X,T,sigma2save,outliers); else C=0; end;

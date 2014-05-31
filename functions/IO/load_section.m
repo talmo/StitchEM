@@ -10,10 +10,6 @@ if params.verbosity > 0; fprintf('== Loading section %d.\n', sec_num); end
 %% Path info
 info = get_path_info(get_section_path(sec_num, params.wafer_path));
 
-%% Cache
-%features_cache = fullfile(params.cache_path, 'features', [info.name '.mat']);
-%TODO
-
 %% Section information and metadata
 % Info
 sec.num = sec_num;

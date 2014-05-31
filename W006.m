@@ -1,10 +1,15 @@
 %% Configuration
-% Wafer and sections
-%waferpath('/mnt/data0/ashwin/07122012/S2-W003')
-waferpath('/data/home/talmo/EMdata/S2-W003')
+% Specify wafer path
+waferpath('/mnt/data0/ashwin/07122012/S2-W006')
+
+% Analyze path
 info = get_path_info(waferpath);
-wafer = info.wafer;
+status.wafer = info.wafer;
+status.pipeline_script = mfilename;
 sec_nums = info.sec_nums;
+
+% Skip sections
+%sec_nums(103) = []; % skip
 
 % Load default parameters
 default_params
@@ -22,12 +27,14 @@ default_params
 %       Or:
 %   for s=10:15; params(s).z.max_match_error = 2000; end
 
-% S2-W003:
-%Section 72 is rotated by quite a bit, but 73 goes back to normal
-params(72).z = z_presets.large_trans;
-params(73).z = z_presets.rel_to_2previous;
-params(140).z = z_presets.ignore_z_error;
-params(141).z = z_presets.rel_to_2previous;
+% S2-W006
+params(1).xy.align.fixed_tile = 2; % tile 1 is missing
+params(2).xy = xy_presets.grid_align;
+params(3).xy = xy_presets.grid_align;
+params(6).xy.align.fixed_tile = 2; % tile 1 is missing
+params(8).xy = xy_presets.grid_align;
+params(11).xy = xy_presets.grid_align;
+params(15).xy.max_match_error = inf;
 
 %% Run alignment
 try

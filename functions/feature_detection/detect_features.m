@@ -16,6 +16,7 @@ tform_warnings('off')
 
 % Get best tile images
 tile_set = closest_tileset(sec, params.detection_scale);
+assert(~isempty(tile_set), 'Could not find any tile sets at or above the specified scale.')
 tiles = sec.tiles.(tile_set).img;
 pre_scale = sec.tiles.(tile_set).scale;
 if params.verbosity > 0; fprintf('Using tile set ''%s'' with base alignment ''%s''.\n', tile_set,  params.alignment); end

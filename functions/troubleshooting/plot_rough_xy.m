@@ -24,13 +24,14 @@ for tile = 1:sec.num_tiles
 end
 
 % Grid
-lims = min(vertcat(bounding_boxes{:}));
-overlap = sec.alignments.rough_xy.meta.assumed_overlap;
-xticks = [0; cumsum(cellfun(@(sz) sz(2) * (1-overlap), sec.tile_sizes(sec.grid(1,1:end-1))))] + lims(1);
-yticks = [0; cumsum(cellfun(@(sz) sz(1) * (1-overlap), sec.tile_sizes(sec.grid(1:end-1,1))))] + lims(2);
+% lims = min(vertcat(bounding_boxes{:}));
+% overlap = sec.alignments.rough_xy.meta.assumed_overlap;
+% xticks = [0; cumsum(cellfun(@(sz) sz(2) * (1-overlap), sec.tile_sizes(sec.grid(1,1:end-1))))] + lims(1);
+% yticks = [0; cumsum(cellfun(@(sz) sz(1) * (1-overlap), sec.tile_sizes(sec.grid(1:end-1,1))))] + lims(2);
+% grid on
+% set(gca, 'XTick', xticks)
+% set(gca, 'YTick', yticks)
 grid on
-set(gca, 'XTick', xticks)
-set(gca, 'YTick', yticks)
 
 % Adjust the figure
 axis equal ij

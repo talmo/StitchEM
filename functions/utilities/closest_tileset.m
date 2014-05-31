@@ -2,7 +2,7 @@ function tile_set = closest_tileset(sec, scale)
 %CLOSEST_TILESET Returns the name of the tile set in the section closest to the specified detection scale.
 % Usage:
 %   tile_set = closest_tileset(sec, scale)
-%
+% 
 % See also: load_section
 
 if ~isstruct(sec) || ~isfield(sec, 'tiles')
@@ -20,7 +20,8 @@ scales = cellfun(@(s) sec.tiles.(s).scale, tile_sets);
 
 % Couldn't find any tile sets matching criteria
 if isempty(idx)
-    error('None of the tile sets in the structure are of greater or equal scale to the specified scale.')
+    tile_set = [];
+    return
 end
 
 % Return tile set
