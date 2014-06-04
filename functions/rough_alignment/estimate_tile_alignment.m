@@ -5,7 +5,7 @@ function [tile_tform, tforms, varargout] = estimate_tile_alignment(tile_img, ove
 %
 % Optionally, if the overview was already registered to another section's
 % overview, simply pass in the pre-computed transformation:
-%   tile_tform = estimate_tile_alignment(tile_img, overview_img, tform_overview);
+%   tile_tform = estimate_tile_alignment(tile_img, overview_img, overview_tform);
 %
 % Optional name-value pairs and their defaults:
 %   overview_scale = 0.5
@@ -14,28 +14,19 @@ function [tile_tform, tforms, varargout] = estimate_tile_alignment(tile_img, ove
 %   show_registration = false
 
 % Parse inputs
-[tform_overview, params, unmatched_params] = parse_inputs(varargin{:});
+[params, unmatched_params] = parse_inputs(varargin{:});
 
 % Pre-process the images
 [tile, overview] = pre_process(tile_img, overview_img, params);
 
 % (Try to) register the tile to the overview image
 try
-    % Try registering with any custom registration parameters
-    tform_registration = surf_register(overview, tile, unmatched_params);
+    tform_registration = surf_register(overview, tile);
 catch err
-    if ~isempty(params.surf_register_params)
-        % We failed to register with custom params, try with default
-        try
-            %disp('Tile registration with custom parameters failed. Trying defaults.')
-            tform_registration = surf_register(overview, tile, 'default', 'verbosity', 0);
-        catch err2
-            % We failed to register with default params, try fallback
-            fallback_registration(overview, tile, err2);
-        end
-    else
-        % We failed to register with default params, try fallback
-        fallback_registration(overview, tile, err);
+    try 
+        tform_registration = fallback_registration(overview, tile, err);
+    catch err2
+        tform_registration = fallback_registration(overview, tile, err2);
     end
 end
 
@@ -54,21 +45,21 @@ tform_rescale = make_tform('scale', 1 / (reg_scale * params.tile_scale));
 
 % Compose the final tform:
 % Prescale -> Register to overview -> Register overview to other overview -> Rescale
-tile_tform = affine2d(tform_prescale.T * tform_registration.T * tform_overview.T * tform_rescale.T);
+tile_tform = affine2d(tform_prescale.T * tform_registration.T * params.overview_tform.T * tform_rescale.T);
 
 % Return the intermediate transforms as a secondary output argument
 tforms.prescale = tform_prescale;
 tforms.registration = tform_registration;
-tforms.overview = tform_overview;
+tforms.overview = params.overview_tform;
 tforms.rescale = tform_rescale;
 
 %% Visualization
 if params.show_registration
     % Calculate tile transform without prescaling or rescaling
-    tform_tile_unscaled = affine2d(tform_registration.T * tform_overview.T);
+    tform_tile_unscaled = affine2d(tform_registration.T * params.overview_tform.T);
     
     % Apply transforms to images
-    [overview, overview_spatial_ref] = imwarp(overview, tform_overview);
+    [overview, overview_spatial_ref] = imwarp(overview, params.overview_tform);
     [tile, tile_spatial_ref] = imwarp(tile, tform_tile_unscaled);
     
     % Merge and display results
@@ -89,8 +80,8 @@ end
 
 function [tile_img, overview_img] = pre_process(tile_img, overview_img, params)
 % Resize
-if params.tile_pre_scale ~= params.tile_scale
-    tile_img = imresize(tile_img, 1 / params.tile_pre_scale * params.tile_scale);
+if params.tile_prescale ~= params.tile_scale
+    tile_img = imresize(tile_img, 1 / params.tile_prescale * params.tile_scale);
 end
 if params.overview_prescale ~= params.overview_scale
     overview_img = imresize(overview_img, 1 / params.overview_prescale * params.overview_scale);
@@ -132,21 +123,21 @@ switch err.identifier
 end
 end
 
-function [tform_overview, params, unmatched] = parse_inputs(varargin)
+function [params, unmatched] = parse_inputs(varargin)
 % Create inputParser instance
 p = inputParser;
 p.KeepUnmatched = true;
 
 % If no transform is passed in, just register it without change
-p.addOptional('tform_overview', affine2d());
+p.addParameter('overview_tform', affine2d());
 
-% Overview pre-processing
+% Overview
 p.addParameter('overview_prescale', 1.0);
 p.addParameter('overview_scale', 0.78);
 p.addParameter('overview_crop_ratio', 0.5);
 
-% Scaling
-p.addParameter('tile_pre_scale', 1.0);
+% Tile
+p.addParameter('tile_prescale', 1.0);
 p.addParameter('tile_scale', 0.78 * 0.07);
 
 % Visualization
@@ -157,7 +148,6 @@ p.addParameter('verbosity', 0);
 
 % Validate and parse input
 p.parse(varargin{:});
-tform_overview = p.Results.tform_overview;
-params = rmfield(p.Results, 'tform_overview');
+params = p.Results;
 unmatched = p.Unmatched;
 end

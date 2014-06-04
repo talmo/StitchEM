@@ -1,6 +1,6 @@
 %% Configuration
 % Wafer and sections
-waferpath('/mnt/data0/ashwin/07122012/S2-W005')
+waferpath('/mnt/data0/ashwin/07122012/S2-W007')
 
 % Analyze path
 info = get_path_info(waferpath);
@@ -27,29 +27,16 @@ default_params
 %       Or:
 %   for s=10:15; params(s).z.max_match_error = 2000; end
 
-% S2-W005
+% S2-W007
 % XY
-params(35).xy = xy_presets.grid_align;
-params(56).xy.max_match_error = inf;
-
-% Z
-params(4).z.max_match_error = inf;
-params(5).z.max_match_error = inf;
-params(8).z.max_match_error = inf;
-params(9).z.max_match_error = inf;
-params(10).z.max_match_error = inf;
-params(11).z.max_match_error = inf;
-params(15).z.max_match_error = inf;
-params(20).z.max_match_error = inf;
-params(21).z.max_match_error = inf;
-params(25).z.max_match_error = inf;
-params(26).z.max_match_error = inf;
-params(27).z.max_match_error = inf;
-params(28).z.max_match_error = inf;
-params(29).z.max_match_error = inf;
-params(32).z.max_match_error = inf;
-for s=33:length(params); params(s).z.max_match_error = inf; end
-
+params(2).xy = xy_presets.grid_align;
+params(9).xy = xy_presets.grid_align;
+params(10).xy = xy_presets.grid_align;
+params(10).xy.matching.filter_method = 'gmm';
+params(10).xy.matching.filter_fallback = 'geomedian';
+for s=11:length(params); params(s).xy = xy_presets.grid_align; end
+params(12).xy.matching.filter_method = 'gmm';
+params(12).xy.matching.filter_fallback = 'geomedian';
 %% Run alignment
 try
     align_stack_xy

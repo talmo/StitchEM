@@ -16,14 +16,50 @@ if isfield(secB, 'z_matches')
     fprintf('<strong>Filtering method used</strong>: %s\n', last_z_matches.meta.filtering.method)
 
     % Show displacements
-    plot_displacements(secB.z_matches)
+    %plot_displacements(secB.z_matches)
 end
+
+%% Alignment
+disp('== <strong>Alignment</strong>:')
+% Check if section has alignment
+attempted_alignment = [];
+if (exist('alignment_error', 'var') && strcmp(alignment_error.identifier, 'Z:LargeMatchError')) || ...
+        ~isfield(sec.alignments, 'z')
+    % Try to align anyway
+    try
+        switch z_params.alignment_method
+            case 'lsq'
+                % Least Squares
+                attempted_alignment = align_z_pair_lsq(secB, last_z_matches, last_z_matches.alignmentB);
+
+            case 'cpd'
+                % Coherent Point Drift
+                attempted_alignment = align_z_pair_cpd(secB, last_z_matches, last_z_matches.alignmentB, 0);
+        end
+        
+        disp('Estimated alignment with potentially bad matches.')
+        fprintf('<strong>Prior error</strong>: %f px/match\n', attempted_alignment.meta.avg_prior_error)
+        fprintf('<strong>Post error</strong>: %f px/match\n', attempted_alignment.meta.avg_post_error)
+        
+        plot_section_pair(secA, secB, attempted_alignment)
+    catch
+        disp('Section does not have Z alignment and it was not possible to estimate an alignment with the current matches.')
+    end
+    
+elseif isfield(sec.alignments, 'z')
+    disp('Alignment error:')
+    fprintf('<strong>Prior error</strong>: %f px/match\n', sec.alignments.xy.meta.avg_prior_error)
+    fprintf('<strong>Post error</strong>: %f px/match\n', sec.alignments.xy.meta.avg_post_error)
+end
+
+disp('Check z_params.align for info on parameters used.')
 
 %% Suggestions
 fprintf('\n<strong>Suggested next steps:</strong>\n')
 disp('- View the features: <strong>plot_z_features(secB)</strong> or <strong>plot_z_features(secB, tile)</strong>')
 disp('- View the matches: <strong>plot_z_matches(secA, secB)</strong>')
-disp('- View the aligned sections: <strong>plot_section(secA, ''z'', ''r0.1''), plot_section(secB, ''z'', ''g0.1'')</strong>')
+disp('- View the displacements: <strong>plot_displacements(secB.z_matches)</strong>')
+disp('- View the aligned sections: <strong>plot_section_pair(secA, secB)</strong>')
 disp('- View the rendered section: <strong>show_sec(secB)</strong>')
 fprintf('- Try ignoring the matching error: <strong>params(%d).z.max_match_error = inf;</strong>\n', secB.num)
 disp('- Try using a different parameter preset:')

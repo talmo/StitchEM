@@ -4,101 +4,105 @@ function alignment = rough_align_xy(sec, varargin)
 %   sec.alignments.rough_xy = rough_align_xy(sec)
 
 % Parse inputs
-[params, unmatched_params] = parse_input(varargin{:});
+params = parse_input(varargin{:});
 
 if params.verbosity > 0
     fprintf('== Rough aligning tiles for section %d.\n', sec.num)
 end
 total_time = tic;
 
-% Slice out variables needed in loop
-sec_num = sec.num;
-tiles = sec.tiles.rough.img;
-tile_prescale = sec.tiles.rough.scale;
-overview = sec.overview.img;
-overview_prescale = sec.overview.scale;
-overview_tform = sec.overview.alignment.tform;
-verbosity = params.verbosity;
-
-% Estimate alignments
-rough_alignments = cell(sec.num_tiles, 1);
-tforms = cell(sec.num_tiles, 1);
+%% Register to overview
+registration_tforms = cell(sec.num_tiles, 1);
 if params.align_to_overview
+    reg_params = params.overview_registration;
+    
+    % Tiles
+    tile_set = closest_tileset(sec, params.overview_registration.tile_scale);
+    assert(~isempty(tile_set), 'Could not find any tile sets at or above the specified scale.')
+    tiles = sec.tiles.(tile_set).img;
+    p.tile_prescale = sec.tiles.(tile_set).scale;
+    
+    % Overview
+    assert(~isempty(sec.overview), 'Overview is not loaded in the section.')
+    overview = sec.overview.img;
+    p.overview_prescale = sec.overview.scale;
+    p.overview_tform = sec.overview.alignment.tform;
+
+    % Estimate alignments
+    intermediate_tforms = cell(sec.num_tiles, 1);
     tform_warnings('off');
-    parfor tile_num = 1:sec.num_tiles
+    parfor t = 1:sec.num_tiles
         registration_time = tic;
         try
-            [rough_alignments{tile_num}, tforms{tile_num}] = estimate_tile_alignment(tiles{tile_num}, overview, overview_tform, 'tile_pre_scale', tile_prescale, 'overview_prescale', overview_prescale, unmatched_params);
+            % reg_params are the parameters specified by this function
+            % p are additional parameters needed by estimate_tile_alignments
+            [registration_tforms{t}, intermediate_tforms{t}] = ...
+                estimate_tile_alignment(tiles{t}, overview, reg_params, p);
         catch
-            if verbosity > 2
-                fprintf('Failed to register section %d -> tile %d to its overview. [%.2fs]\n', sec_num, tile_num, toc(registration_time))
-            end
+            if params.verbosity > 2; printf('Failed to register tile %d to overview. [%.2fs]\n', t, toc(registration_time)); end
             continue
         end
-        if verbosity > 2
-            fprintf('Estimated rough alignment for section %d -> tile %d. [%.2fs]\n', sec_num, tile_num, toc(registration_time))
-        end
+        if params.verbosity > 2; fprintf('Estimated rough alignment for section %d -> tile %d. [%.2fs]\n', tile_num, toc(registration_time)); end
     end
-end
-successful_registrations = find(cellfun(@(x) ~isempty(x), rough_alignments));
-if params.verbosity > 1
-    registered_str = strjoin(cellfun(@(x) num2str(x), num2cell(successful_registrations), 'UniformOutput', false)', ', ');
-    fprintf('Aligned tiles to overview: %s\n', registered_str)
-end
-
-
-% Some tiles might have failed to be registered, in which case just align
-% based on their grid position relative to the nearest registered tile
-failed_registrations = find(cellfun('isempty', rough_alignments));
-if any(failed_registrations)
-    rough_alignments = estimate_tile_grid_alignments(rough_alignments);
+    tform_warnings('off');
     
-    if params.verbosity > 1
-        failed_str = strjoin(cellfun(@(x) num2str(x), num2cell(failed_registrations), 'UniformOutput', false)', ', ');
-        fprintf('Aligned tiles to grid: %s\n', failed_str)
-    end
-end
-tform_warnings('on');
-
-% Save to section structure
-alignment.tforms = rough_alignments;
-alignment.rel_tforms = rough_alignments;
-alignment.rel_to = 'initial';
-alignment.meta.intermediate_tforms = tforms;
-alignment.meta.tile_scale = tile_prescale;
-alignment.meta.overview_tform = overview_tform;
-alignment.meta.overview_scale = overview_prescale;
-alignment.meta.overview_rel_to_sec = sec.overview.alignment.rel_to_sec;
-alignment.meta.grid_aligned = failed_registrations;
-alignment.meta.assumed_overlap = 0.1;
-
-if params.verbosity > 0
-    fprintf('Registered <strong>%d/%d</strong> tiles to overview. [%.2fs]\n', length(successful_registrations), sec.num_tiles, toc(total_time))
+    registered_tiles = find(~areempty(registration_tforms));
+    if params.verbosity > 1; fprintf('Registered to overview: %s\n', vec2str(registered_tiles)); end
+    
+    % Metadata
+    reg_meta.registered_tiles = registered_tiles;
+    reg_meta.tile_set = tile_set;
+    reg_meta.tile_prescale = p.tile_prescale;
+    reg_meta.overview_prescale = p.overview_prescale;
+    reg_meta.overview_tform = p.overview_tform;
+    reg_meta.overview_rel_to_sec = sec.overview.alignment.rel_to_sec;
+    reg_meta.intermediate_tforms = intermediate_tforms;
+else
+    if params.verbosity > 0; disp('Skipping overview registration.'); end
 end
 
-% Show merge
-if params.show_registration
-    figure
-    imshow_section('tile_imgs', tiles, 'pre_scale', tile_prescale,'tforms', alignment.tforms)
-end
+%% Grid alignment
+% Align unregistered tiles to grid relative to closest registered tiles
+alignment = rel_grid_alignment(sec, registration_tforms, params.rel_to, params.expected_overlap);
+
+grid_aligned = find(areempty(registration_tforms));
+if params.verbosity > 1; fprintf('Grid aligned: %s\n', vec2str(grid_aligned)); end
+
+% Additional metadata
+alignment.meta.grid_aligned = grid_aligned;
+alignment.meta.method = 'rough_align_xy';
+if params.align_to_overview
+    alignment.meta.overview_registration = reg_meta;
 end
 
-function [params, unmatched] = parse_input(varargin)
+if params.verbosity > 0; fprintf('Registered <strong>%d/%d</strong> tiles to overview. [%.2fs]\n', sec.num_tiles-length(grid_aligned), sec.num_tiles, toc(total_time)); end
+
+end
+
+function params = parse_input(varargin)
 % Create inputParser instance
 p = inputParser;
-p.KeepUnmatched = true;
 
-% Align to overview
+% Base alignment
+p.addParameter('rel_to', 'initial');
+
+% Overview registration
 p.addParameter('align_to_overview', true);
+reg_defaults.tile_scale = 0.07 * 0.78;
+reg_defaults.overview_scale = 0.78;
+reg_defaults.overview_crop_ratio = 0.5;
+p = params_struct(p, 'overview_registration', reg_defaults);
+
+% Grid alignment
+p.addParameter('expected_overlap', 0.1)
 
 % Debugging
 p.addParameter('verbosity', 1);
 
-% Visualization
-p.addParameter('show_registration', false);
-
 % Validate and parse input
 p.parse(varargin{:});
 params = p.Results;
-unmatched = p.Unmatched;
+
+% Overwrite parameter structures with any explicit field names
+params = overwrite_struct(params, reg_defaults, 'overview_registration', p.UsingDefaults);
 end

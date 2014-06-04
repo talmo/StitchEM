@@ -9,9 +9,8 @@ classdef CPDNonRigid < images.geotrans.internal.GeometricTransformation
         Yorig
         mode
         block_sz
-        % Low-rank
-        numeig
-        eigfgt
+        fgt_models
+        fgt_params
     end
     
     
@@ -22,6 +21,9 @@ classdef CPDNonRigid < images.geotrans.internal.GeometricTransformation
             %parameters and methods from Coherent Point Drift.
             %
             % Transform is the output from cpd_register()
+            
+            % Define required property from base class
+            self.Dimensionality = 2;
             
             % Save transform parameters
             self.beta = Transform.beta * Transform.normal.yscale;
@@ -35,12 +37,24 @@ classdef CPDNonRigid < images.geotrans.internal.GeometricTransformation
                 mode = 'full';
             end
             self.mode = mode;
-            self.block_sz = 1000;
-            self.numeig = 30;
-            self.eigfgt = true;
+            self.block_sz = 1e5;
             
-            % Define required property from base class
-            self.Dimensionality = 2;
+            if strcmp(self.mode, 'fgt')
+                % Parameters
+                params.e = 8;      % Ratio of far field (default e = 10)
+                params.K = round(min([sqrt(length(self.Yorig)) 100])); % Number of centers (default K = sqrt(Nx))
+                params.p = 6;      % Order of truncation (default p = 8)
+                params.hsigma = sqrt(2) * self.beta;
+                
+                % Create models
+                [models(1).xc , models(1).A_k] = fgt_model(self.Yorig', self.W(:, 1)', params.hsigma, params.e);
+                [models(2).xc , models(2).A_k] = fgt_model(self.Yorig', self.W(:, 2)', params.hsigma, params.e);
+                
+                % Save to properties
+                self.fgt_models = models;
+                self.fgt_params = params;
+            end
+            
         end
         
         function G = findG(self, x)
@@ -95,6 +109,14 @@ classdef CPDNonRigid < images.geotrans.internal.GeometricTransformation
             
         end
         
+        function GW = fgt(self, X)
+            % Uses Fast Gaussian Transform to calculate G * W
+
+            % Predict using saved models
+            GW = [fgt_predict(X', self.fgt_models(1).xc, self.fgt_models(1).A_k, self.fgt_params.hsigma, self.fgt_params.e)', ...
+                  fgt_predict(X', self.fgt_models(2).xc, self.fgt_models(2).A_k, self.fgt_params.hsigma, self.fgt_params.e)'];
+        end
+        
         function XY = apply_tform(self, UV)
             % Applies inverse mapping to points.
             % From: cpd_transform
@@ -117,12 +139,14 @@ classdef CPDNonRigid < images.geotrans.internal.GeometricTransformation
                     XY = UV * self.s + ...
                          (Q * (S * (Q' * self.W))) + ...
                          repmat(self.shift, size(UV, 1), 1);
+                     
                 case 'full'
                     % Compute full-rank G
                     G = self.findG(UV);
                     XY = UV * self.s + ...
                          G * self.W + ...
                          repmat(self.shift, size(UV, 1), 1);
+                     
                 case 'block'
                     % Compute full-rank in blocks
                     
@@ -143,6 +167,39 @@ classdef CPDNonRigid < images.geotrans.internal.GeometricTransformation
                     XY = UV * self.s + ... % scaled original points
                          XY + ... % displacement
                          repmat(self.shift, size(UV, 1), 1); % translation
+                     
+                case 'parblock'
+                    % Same as block but in parallel
+                    
+                    % Prepare for parallelization
+                    n = size(UV, 1);
+                    sz = self.block_sz;
+                    idxA = 1:sz:n;
+                    idxB = min(idxA + sz - 1, n);
+                    num_blocks = length(idxA);
+                    XY = arrayfun(@(ia, ib) UV(ia:ib, :), idxA, idxB, 'UniformOutput', false);
+                    G = @self.findG;
+                    W = self.W;
+                    
+                    % Solve displacement in blocks
+                    parfor i = 1:num_blocks
+                        % Calculate displacement
+                        XY{i} = G(XY{i}) * W;
+                    end
+                    
+                    % Merge points
+                    XY = vertcat(XY{:});
+                    
+                    % Calculate final points
+                    XY = UV * self.s + ... % scaled original points
+                         XY + ... % displacement
+                         repmat(self.shift, size(UV, 1), 1); % translation
+                     
+                case 'fgt'
+                    % Use Fast Gaussian Transform to approximate G*W
+                    XY = UV * self.s + ... % scaling
+                        self.fgt(UV) + ... % approximation to G*W
+                        repmat(self.shift, size(UV, 1), 1); % translation
             end
         end
         

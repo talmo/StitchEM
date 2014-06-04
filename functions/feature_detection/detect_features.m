@@ -63,7 +63,7 @@ parfor t = 1:sec.num_tiles
     % Detect features in tile
     feats = detect_surf_features(tiles{t}, 'regions', local_regions, ...
         'pre_scale', pre_scale, 'detection_scale', params.detection_scale, ...
-        unmatched_params);
+        params.SURF, unmatched_params);
     
     % Get global positions of features
     feats.global_points = tforms{t}.transformPointsForward(feats.local_points);
@@ -111,6 +111,9 @@ p.addParameter('min_overlap_area', 0.05);
 
 % Detection scale
 p.addParameter('detection_scale', 1.0);
+
+% SURF parameters
+p.addParameter('SURF', struct());
 
 % Verbosity
 p.addParameter('verbosity', 1);

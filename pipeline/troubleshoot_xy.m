@@ -2,18 +2,22 @@ fprintf('<strong>\n\n=== Troubleshooting XY: %s (%d/%d)</strong>\n', sec.name, s
 
 %% Matching
 % Get matches
-last_xy_matches = sec.xy_matches;
+if isfield(sec, 'xy_matches')
+    last_xy_matches = sec.xy_matches;
 
-if ~isfield(last_xy_matches, 'outliers')
-    % Redetect matches with same parameters but keep outliers
-    last_xy_matches = match_xy(sec, 'xy', xy_params.matching, 'keep_outliers', true, 'verbosity', 0);
+    if ~isfield(last_xy_matches, 'outliers')
+        % Redetect matches with same parameters but keep outliers
+        last_xy_matches = match_xy(sec, 'xy', xy_params.matching, 'keep_outliers', true, 'verbosity', 0);
+    end
+
+    % Show matching statistics
+    disp('== <strong>Matching</strong>:')
+    fprintf('<strong>NNR</strong>: %f px/match (n = %d)\n', last_xy_matches.meta.avg_nnr_error, last_xy_matches.meta.num_nnr_matches)
+    fprintf('<strong>Inliers</strong>: %f px/match (n = %d)\n', last_xy_matches.meta.avg_error, last_xy_matches.num_matches)
+    fprintf('<strong>Outliers</strong>: %f px/match (n = %d)\n', last_xy_matches.meta.avg_outlier_error, last_xy_matches.meta.num_outliers)
+    
+    disp('Check xy_params.matching for info on parameters used.')
 end
-
-% Show matching statistics
-disp('== <strong>Matching</strong>:')
-fprintf('<strong>NNR</strong>: %f px/match (n = %d)\n', last_xy_matches.meta.avg_nnr_error, last_xy_matches.meta.num_nnr_matches)
-fprintf('<strong>Inliers</strong>: %f px/match (n = %d)\n', last_xy_matches.meta.avg_error, last_xy_matches.num_matches)
-fprintf('<strong>Outliers</strong>: %f px/match (n = %d)\n', last_xy_matches.meta.avg_outlier_error, last_xy_matches.meta.num_outliers)
 
 % Per tile:
 % tile_stats = tile_match_stats(last_xy_matches, sec.grid);
@@ -24,8 +28,6 @@ fprintf('<strong>Outliers</strong>: %f px/match (n = %d)\n', last_xy_matches.met
 % if any(tile_stats.match_error > xy_params.max_match_error)
 %     fprintf('<strong>Tiles exceeding max_match_error</strong>: %s\n', vec2str(find(tile_stats.match_error > xy_params.max_match_error)))
 % end
-
-disp('Check xy_params.matching for info on parameters used.')
    
 %% Alignment
 disp('== <strong>Alignment</strong>:')
@@ -37,13 +39,11 @@ if (exist('alignment_error', 'var') && strcmp(alignment_error.identifier, 'XY:La
     try
         attempted_alignment = align_xy(sec, xy_params.align, 'verbosity', 0);
         disp('Estimated alignment with potentially bad matches.')
-        disp('If a good alignment was achieved despite a high matching error, you can ignore the matching error by adding the following line to the custom per-section parameters:')
-        fprintf('\tparams(%d).xy.max_match_error = inf;\n', sec.num)
+        fprintf('<strong>Prior error</strong>: %f px/match\n', attempted_alignment.meta.avg_prior_error)
+        fprintf('<strong>Post error</strong>: %f px/match\n', attempted_alignment.meta.avg_post_error)
     catch
         disp('Section does not have XY alignment and it was not possible to estimate an alignment with the current matches.')
     end
-    fprintf('<strong>Prior error</strong>: %f px/match\n', attempted_alignment.meta.avg_prior_error)
-    fprintf('<strong>Post error</strong>: %f px/match\n', attempted_alignment.meta.avg_post_error)
 elseif isfield(sec.alignments, 'xy')
     disp('Alignment error:')
     fprintf('<strong>Prior error</strong>: %f px/match\n', sec.alignments.xy.meta.avg_prior_error)
@@ -76,5 +76,3 @@ fprintf('- Try ignoring the matching error: <strong>params(%d).xy.max_match_erro
 disp('- Try using a different parameter preset:')
 fprintf('\t<strong>params(%d).xy = xy_presets.grid_align; %% Use grid alignment for rough alignment step</strong>\n', sec.num)
 fprintf('\t<strong>params(%d).xy = xy_presets.gmm_filter; %% Use GMM to filter matches</strong>\n', sec.num)
-fprintf('\n<strong>Original error</strong>:\n')
-rethrow(alignment_error)

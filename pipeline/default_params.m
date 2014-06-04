@@ -1,13 +1,18 @@
 %% Defaults: XY alignment
 % General
 defaults.xy.overwrite = false; % throws error if section is already XY aligned
-defaults.xy.scales = {'full', 1.0, 'rough', 0.07 * 0.78};
+defaults.xy.skip_tiles = [];
 
-% Rough alignment
+% [rough_align_xy] Rough alignment
 defaults.xy.rough.align_to_overview = true;
+defaults.xy.rough.overview_registration.tile_scale = 0.07 * 0.78;
+defaults.xy.rough.overview_registration.overview_scale = 0.78;
+defaults.xy.rough.overview_registration.overview_crop_ratio = 0.5;
 
-% [detect_features] Feature detection (1.0x)
-defaults.xy.SURF.MetricThreshold = 11000; % for full res tiles
+% [detect_features] Feature detection
+defaults.xy.features.detection_scale = 1.0;
+defaults.xy.features.min_overlap_area = 0.05;
+defaults.xy.features.SURF.MetricThreshold = 11000; % for full res tiles
 
 % [match_xy] Matching: NNR
 defaults.xy.matching.NNR.MaxRatio = 0.6;
@@ -36,8 +41,8 @@ defaults.z.overwrite = false; % throws error if section is already Z aligned
 defaults.z.rel_to = -1; % relative section to align to
 
 % [detect_features] Feature detection (0.125x)
-defaults.z.scale = 0.125;
-defaults.z.SURF.MetricThreshold = 2000;
+defaults.z.features.scale = 0.125;
+defaults.z.features.SURF.MetricThreshold = 2000;
 
 % Matching
 defaults.z.matching_mode = 'auto'; % 'auto' or 'manual'
@@ -91,5 +96,5 @@ z_presets.manual_matching = defaults.z;
 z_presets.manual_matching.matching_mode = 'manual';
 z_presets.manual_matching.max_aligned_error = 250;
 z_presets.low_res = defaults.z;
-z_presets.low_res.scale = 0.075;
-z_presets.low_res.SURF.MetricThreshold = 1000;
+z_presets.low_res.features.scale = 0.075;
+z_presets.low_res.features.SURF.MetricThreshold = 1000;

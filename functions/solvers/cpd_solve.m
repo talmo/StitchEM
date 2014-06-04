@@ -20,6 +20,8 @@ defaults.method = 'affine';
 defaults.viz = false;
 defaults.savegif = false;
 defaults.verbosity = 0;
+% nonrigid:
+defaults.tform_method = 'full';
 % nonrigid_lowrank:
 defaults.numeig = 30; % number of eigenvectors to leave to estimate G
 defaults.eigfgt = true; % use FGT to find eigenvectors (avoids explicitly computing G)
@@ -58,7 +60,7 @@ switch opt.method
         T = cpd_register(ptsB, ptsA, opt);
         
         % Create CPDNonRigid class
-        tform = CPDNonRigid(T);
+        tform = CPDNonRigid(T, opt.tform_method);
 end
 
 if opt.verbosity > 0

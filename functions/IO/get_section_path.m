@@ -1,5 +1,8 @@
 function section_path = get_section_path(sec_num, wafer_path)
 %GET_SECTION_PATH Returns the path to a section.
+% Usage:
+%   section_path = get_section_path(sec_num)
+%   section_path = get_section_path(sec_num, wafer_path)
 
 if nargin < 2
     wafer_path = waferpath;

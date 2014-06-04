@@ -48,10 +48,11 @@ end
 
 % Transform tiles
 parfor t = 1:sec.num_tiles
-    % Load tile
+    % Tile
     tile = tiles{t};
     scale = params.scale / pre_scale;
-    if ~isempty(tiles{t})
+    if isempty(tiles{t})
+        % Load tile if we don't already have it
         tile = imread(tile_paths{t});
         scale = params.scale;
     end

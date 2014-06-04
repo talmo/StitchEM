@@ -5,11 +5,16 @@ function sec = load_overview(sec, scale)
 
 load_time = tic;
 
-sec.overview.img = imload_overview(sec.num, scale);
-sec.overview.size = imsize(get_overview_path(sec.num)); % get unscaled size
-sec.overview.scale = scale;
+overview_path = get_overview_path(sec);
 
-fprintf('Loaded overview (%sx) in section %d. [%.2fs]\n', num2str(scale), sec.num, toc(load_time))
+sec.overview.img = imread(overview_path);
+sec.overview.path = overview_path;
+sec.overview.size = size(sec.overview.img); % get unscaled size
+sec.overview.scale = scale;
+sec.overview.alignment.tform = affine2d();
+sec.overview.alignment.rel_to_sec = sec.num;
+
+fprintf('Loaded overview (%sx) in %s. [%.2fs]\n', num2str(scale), sec.name, toc(load_time))
 
 end
 

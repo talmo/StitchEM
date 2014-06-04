@@ -59,7 +59,7 @@ tform_estimation_time = toc;
 num_inliers = size(fixed_inliers, 1);
 
 % Calculate error
-mean_registration_error = calculate_registration_error(fixed_inliers, moving_inliers, tform);
+mean_registration_error = rownorm2(tform.transformPointsForward(moving_inliers) - fixed_inliers);
 
 if params.verbosity > 0
     fprintf('Found %d inliers within matches and estimated registration transform. [%.2fs]\n', num_inliers, tform_estimation_time)
